@@ -1,0 +1,182 @@
+/* Let the supplied Buildings artwork fill more of its card. */
+@media (min-width: 701px) {
+  .roofing-backdrop .home-highlights--easy-lock > .coldformed--reference {
+    grid-template-columns: minmax(0, .38fr) minmax(0, .62fr);
+    grid-template-rows: auto minmax(170px, 1fr);
+    gap: 12px;
+  }
+
+  .roofing-backdrop .home-highlights--easy-lock > .coldformed--reference .coldformed-content {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: start;
+    justify-content: flex-start;
+  }
+
+  .roofing-backdrop .home-highlights--easy-lock > .coldformed--reference .coldformed-collage {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: start;
+  }
+}
+
+.roofing-backdrop .home-highlights--easy-lock > .coldformed--reference .coldformed-collage {
+  align-self: center;
+  height: auto;
+  aspect-ratio: 7875 / 10125;
+  border: 1px solid rgba(255, 255, 255, .8);
+  border-radius: 16px;
+  background-size: 100% 100%;
+  box-shadow: 0 2px 0 rgba(8, 38, 60, .18),
+              0 9px 16px rgba(8, 38, 60, .28),
+              0 20px 30px rgba(8, 38, 60, .2);
+  transform: translateY(-3px);
+}
+
+.roofing-backdrop .home-highlights--easy-lock > .coldformed--reference .coldformed-gallery {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 245px;
+  margin-top: 10px;
+}
+
+.roofing-backdrop .home-highlights--easy-lock > .coldformed--reference .coldformed-gallery-stage {
+  position: relative;
+  width: 100%;
+  height: 225px;
+  perspective: 900px;
+}
+
+.roofing-backdrop .home-highlights--easy-lock > .coldformed--reference .coldformed-gallery-photo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: block;
+  width: 46%;
+  height: auto;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 10px 20px rgba(8, 38, 60, .24);
+  transform: translate(-50%, -50%) rotateY(0);
+  transition: left .95s cubic-bezier(.22,1,.36,1),
+              width .95s cubic-bezier(.22,1,.36,1),
+              transform .95s cubic-bezier(.22,1,.36,1),
+              filter .95s ease,
+              box-shadow .95s ease;
+  cursor: pointer;
+}
+
+.roofing-backdrop .home-highlights--easy-lock > .coldformed--reference .coldformed-gallery-photo[data-position="center"] {
+  z-index: 3;
+  left: 50%;
+  width: 46%;
+  transform: translate(-50%, -50%) translateZ(26px) rotateY(0);
+  filter: brightness(1);
+  box-shadow: 0 4px 7px rgba(8, 38, 60, .18), 0 16px 28px rgba(8, 38, 60, .32);
+}
+
+.roofing-backdrop .home-highlights--easy-lock > .coldformed--reference .coldformed-gallery-photo[data-position="left"] {
+  z-index: 2;
+  left: 16%;
+  width: 30%;
+  transform: translate(-50%, -50%) rotateY(23deg) scale(.93);
+  filter: brightness(.83);
+}
+
+.roofing-backdrop .home-highlights--easy-lock > .coldformed--reference .coldformed-gallery-photo[data-position="right"] {
+  z-index: 2;
+  left: 84%;
+  width: 30%;
+  transform: translate(-50%, -50%) rotateY(-23deg) scale(.93);
+  filter: brightness(.83);
+}
+
+.roofing-backdrop .home-highlights--easy-lock > .coldformed--reference .coldformed-gallery-arrow {
+  position: absolute;
+  z-index: 200;
+  top: 50%;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  transform: translateY(-50%);
+  border: 1px solid #bad4e4;
+  border-radius: 50%;
+  background: #fff;
+  color: #005c97;
+  box-shadow: 0 4px 10px rgba(8, 38, 60, .18);
+  font: 28px/1 Arial, sans-serif;
+  cursor: pointer;
+}
+
+.roofing-backdrop .home-highlights--easy-lock > .coldformed--reference .coldformed-gallery-arrow:hover,
+.roofing-backdrop .home-highlights--easy-lock > .coldformed--reference .coldformed-gallery-arrow:focus-visible {
+  background: #eaf5fb;
+  box-shadow: 0 6px 14px rgba(8, 38, 60, .25);
+}
+
+.roofing-backdrop .home-highlights--easy-lock > .coldformed--reference .coldformed-gallery-prev { left: 3px; }
+.roofing-backdrop .home-highlights--easy-lock > .coldformed--reference .coldformed-gallery-next { right: 3px; }
+
+.roofing-backdrop .home-highlights--easy-lock > .coldformed--reference .coldformed-gallery-dots {
+  display: flex;
+  justify-content: center;
+  gap: 9px;
+  margin-top: 9px;
+}
+
+.roofing-backdrop .home-highlights--easy-lock > .coldformed--reference .coldformed-gallery-dots button {
+  width: 9px;
+  height: 9px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #a8bfce;
+  cursor: pointer;
+}
+
+.roofing-backdrop .home-highlights--easy-lock > .coldformed--reference .coldformed-gallery-dots button[aria-current="true"] {
+  background: #005c97;
+  box-shadow: 0 0 0 3px rgba(0, 92, 151, .14);
+}
+
+@media (max-width: 700px) {
+  .roofing-backdrop .home-highlights--easy-lock > .coldformed--reference .coldformed-gallery-stage {
+    height: 180px;
+  }
+
+  .roofing-backdrop .home-highlights--easy-lock > .coldformed--reference .coldformed-gallery {
+    min-height: 205px;
+  }
+
+  .roofing-backdrop .home-highlights--easy-lock > .coldformed--reference .coldformed-gallery-photo[data-position="center"] {
+    width: 54%;
+  }
+
+  .roofing-backdrop .home-highlights--easy-lock > .coldformed--reference .coldformed-gallery-photo[data-position="left"] {
+    left: 15%;
+    width: 34%;
+  }
+
+  .roofing-backdrop .home-highlights--easy-lock > .coldformed--reference .coldformed-gallery-photo[data-position="right"] {
+    left: 85%;
+    width: 34%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .roofing-backdrop .home-highlights--easy-lock > .coldformed--reference .coldformed-gallery-photo {
+    transition: none;
+  }
+}
+
+/* Continuous, lightweight orbit; each photo stays facing the viewer. */
+.roofing-backdrop .home-highlights--easy-lock > .coldformed--reference .coldformed-gallery-photo {
+  transition: none;
+  backface-visibility: hidden;
+  will-change: transform;
+}
