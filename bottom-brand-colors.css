@@ -1,0 +1,46 @@
+/* Brand colors for the bottom sections only; the header logo stays independent. */
+.inspiration,
+.footer {
+  background: #005c97;
+  color: #fff;
+}
+
+.footer { box-shadow: inset 0 1px 0 rgba(255,255,255,.22); }
+.inspiration p,
+.footer p,
+.footer a:not(.logo),
+.footer .footer-newsletter p:not(.eyebrow),
+.footer .footer-newsletter small,
+.footer .branch-list p {
+  color: #e6f1f8;
+}
+
+.footer .footer-newsletter label,
+.footer .eyebrow,
+.footer h4,
+.footer .branch-list strong,
+.footer .social-links a {
+  color: #fff;
+}
+
+.footer .copyright { color: #d1e5f2; }
+.footer .footer-brand .logo img { filter: brightness(0) invert(1); }
+
+.inspiration .green-btn,
+.footer .green-btn {
+  background: #0070ae;
+  border-color: rgba(255,255,255,.7);
+  color: #fff;
+}
+
+.inspiration .green-btn:is(:hover,:focus-visible),
+.footer .green-btn:is(:hover,:focus-visible) {
+  background: #137fb9;
+  border-color: #fff;
+}
+
+.inspiration .outline-btn:is(:hover,:focus-visible) {
+  background: rgba(255,255,255,.17);
+  color: #fff;
+  border-color: #fff;
+}

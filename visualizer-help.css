@@ -1,0 +1,94 @@
+/* A temporary cue anchored to the first hero card; it does not affect layout. */
+.hero .visualizer-hint {
+  position: absolute;
+  z-index: 4;
+  left: auto;
+  right: calc(100% + 16px);
+  top: calc(25% - 4.5px);
+  bottom: auto;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  width: max-content;
+  translate: 0 -50%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.hero .visualizer-hint[hidden] { display: none; }
+.hero .visualizer-hint[data-state="visible"] {
+  opacity: 1;
+  animation: visualizer-hint-appear 350ms ease-out both;
+}
+
+.hero .visualizer-hint .visualizer-hint-label {
+  padding: 12px 18px;
+  border: 1px solid rgba(255,255,255,.65);
+  border-radius: 999px;
+  background: rgba(0,92,151,.92);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.25),0 5px 15px rgba(7,28,46,.22);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.hero .visualizer-hint[data-state="visible"] .visualizer-hint-label {
+  animation: visualizer-hint-blue-pulse 2600ms ease-in-out infinite;
+}
+
+@keyframes visualizer-hint-blue-pulse {
+  0%,100% { background-color: #004574; }
+  50% { background-color: #1377ab; }
+}
+
+.hero .visualizer-hint .visualizer-hint-arrow {
+  display: block;
+  width: 56px;
+  height: 30px;
+  overflow: visible;
+  color: #fff;
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,.5));
+  animation: visualizer-hint-point 1600ms ease-in-out infinite;
+}
+
+@keyframes visualizer-hint-appear {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes visualizer-hint-point {
+  0%,100% { transform: translateX(0); }
+  50% { transform: translateX(6px); }
+}
+
+@media(max-width:1500px) {
+  .hero .visualizer-hint { right: 0; top: -54px; translate: none; gap: 8px; }
+  .hero .visualizer-hint .visualizer-hint-label { padding: 10px 14px; font-size: 14px; }
+  .hero .visualizer-hint .visualizer-hint-arrow { width: 40px; height: 24px; rotate: 90deg; animation-name: visualizer-hint-point-mobile; }
+}
+
+@media(max-width:760px) {
+  .hero .visualizer-hint { left: 8px; right: auto; top: 12px; bottom: auto; width: calc(50% - 24px); flex-direction: column; gap: 0; }
+  .hero .visualizer-hint .visualizer-hint-label { max-width: 100%; padding: 7px 8px; font-size: 12px; white-space: normal; text-align: center; }
+  .hero .visualizer-hint .visualizer-hint-arrow { width: 30px; height: 18px; }
+}
+
+@keyframes visualizer-hint-point-mobile {
+  0%,100% { transform: translateY(0); }
+  50% { transform: translateY(3px); }
+}
+
+@media(prefers-reduced-motion:reduce) {
+  .hero .visualizer-hint[data-state="visible"],
+  .hero .visualizer-hint[data-state="visible"] .visualizer-hint-label,
+  .hero .visualizer-hint .visualizer-hint-arrow { animation: none; }
+  .hero .visualizer-hint { transition: none; }
+}
+
+@media print { .hero .visualizer-hint { display: none; } }

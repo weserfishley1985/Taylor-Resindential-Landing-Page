@@ -1,0 +1,55 @@
+/* Entrance motion leaves existing logo, image and hover transforms intact. */
+.hero [data-text-reveal="pending"],
+.roofing-backdrop [data-text-reveal="pending"],
+.feature-row [data-text-reveal="pending"],
+.news [data-text-reveal="pending"],
+.projects [data-text-reveal="pending"],
+.inspiration [data-text-reveal="pending"],
+.footer [data-text-reveal="pending"] { opacity: 0; }
+
+.hero [data-text-reveal="entering"],
+.roofing-backdrop [data-text-reveal="entering"],
+.feature-row [data-text-reveal="entering"],
+.news [data-text-reveal="entering"],
+.projects [data-text-reveal="entering"],
+.inspiration [data-text-reveal="entering"],
+.footer [data-text-reveal="entering"] {
+  will-change: opacity, translate;
+  animation: taylor-text-entrance 1250ms cubic-bezier(.22, .61, .36, 1) var(--text-reveal-delay, 0ms) both;
+}
+
+@keyframes taylor-text-entrance {
+  from { opacity: 0; translate: 0 64px; }
+  to { opacity: 1; translate: 0 0; }
+}
+
+.hero .hero-feature-card[data-text-reveal="entering"] {
+  animation-name: taylor-hero-card-entrance;
+}
+
+@keyframes taylor-hero-card-entrance {
+  from { opacity: 0; translate: -240px 0; }
+  to { opacity: 1; translate: 0 0; }
+}
+
+@media (max-width: 760px) {
+  @keyframes taylor-text-entrance {
+    from { opacity: 0; translate: 0 40px; }
+    to { opacity: 1; translate: 0 0; }
+  }
+  @keyframes taylor-hero-card-entrance {
+    from { opacity: 0; translate: -96px 0; }
+    to { opacity: 1; translate: 0 0; }
+  }
+}
+
+@media (prefers-reduced-motion: reduce), print {
+  .hero [data-text-reveal],
+  .hero .hero-feature-card[data-text-reveal],
+  .roofing-backdrop [data-text-reveal],
+  .feature-row [data-text-reveal],
+  .news [data-text-reveal],
+  .projects [data-text-reveal],
+  .inspiration [data-text-reveal],
+  .footer [data-text-reveal] { opacity: 1; translate: none; animation: none; will-change: auto; }
+}

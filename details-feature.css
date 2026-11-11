@@ -1,0 +1,19 @@
+/* Fill only the feature's existing picture area with the selected photograph. */
+.feature-row .feature-photo.feature-image {
+  position: relative;
+  overflow: hidden;
+  background: #d8e4ec;
+}
+
+.feature-row .feature-image > img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 28%;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
