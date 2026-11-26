@@ -1,0 +1,43 @@
+import assert from 'node:assert/strict';
+import {FT,area,distance,project,unproject,validPolygon,planeData,planeEquation,junctionReport,vertexJunctionReport,solvePlaneJunctions,panelLayout,summarize,edgeSurfaceLength,resizeEdgeEndpoint,gableHouseTemplate} from './dist/geometry.mjs';
+const origin={lat:45,lng:-123};
+const points=[{x:0,y:0},{x:40*FT,y:0},{x:40*FT,y:20*FT},{x:0,y:20*FT}];
+const face={id:'A',name:'40 × 20',points:points.map(p=>unproject(p,origin)),pitch:6,bearing:0,eave:10};
+const settings={width:16,maxLength:32,allowance:0};
+const close=(a,b)=>assert.ok(Math.abs(a-b)<1e-5,`${a} != ${b}`);
+const generated=gableHouseTemplate({widthFeet:40,depthFeet:30,pitch:6,eaveHeight:10}),generatedFaces=generated.faces.map((item,index)=>({...item,id:`generated-${index}`,points:item.points.map(point=>unproject(point,origin))})),northData=planeData(generatedFaces[0],origin),southData=planeData(generatedFaces[1],origin);assert.equal(generated.faces.length,2);close(area(generated.footprint)/FT**2,1200);assert.deepEqual(generated.faces.map(face=>face.edges),[['Eave','Rake','Ridge','Rake'],['Ridge','Rake','Eave','Rake']]);close(northData.surface/FT**2,600*Math.sqrt(1.25));close(northData.height(northData.points[0])/FT,10);close(southData.height(southData.points[2])/FT,10);close(northData.height(northData.points[2])/FT,17.5);close(southData.height(southData.points[0])/FT,17.5);assert.equal(junctionReport(generatedFaces,origin)[0].status,'aligned');
+close(area(points)/FT**2,800);close(planeData(face,origin).surface/FT**2,800*Math.sqrt(1.25));
+let p=panelLayout(face,origin,settings);assert.equal(p.length,30);assert.ok(p.every(x=>x.length===22.416666666666668));
+p=panelLayout(face,origin,{...settings,width:12});assert.equal(p.length,40);
+p=panelLayout(face,origin,{...settings,width:36,maxLength:20});assert.equal(p.length,14);assert.ok(p.every(x=>x.oversize));
+const flat={...face,pitch:0};close(summarize([face,flat],origin,settings).surface,800+800*Math.sqrt(1.25));
+assert.equal(validPolygon([{x:0,y:0},{x:10,y:10},{x:0,y:10},{x:10,y:0}]),false);
+assert.equal(validPolygon(points),true);
+const moved={...face,points:[{x:0,y:0},{x:50*FT,y:0},{x:50*FT,y:20*FT},{x:0,y:20*FT}].map(p=>unproject(p,origin))};close(planeData(moved,origin).flat/FT**2,1000);
+const reversed={...face,bearing:180};assert.equal(panelLayout(reversed,origin,settings).length,30);
+const rotated={...face,bearing:90};assert.equal(panelLayout(rotated,origin,settings).length,15);
+const resized=structuredClone(face);resized.points[1]=resizeEdgeEndpoint(resized,0,50,origin);close(edgeSurfaceLength(resized,0,origin),50);close(distance(project(resized.points[0],origin),project(resized.points[1],origin))/FT,50);
+const resizedSlope=structuredClone(face);resizedSlope.points[2]=resizeEdgeEndpoint(resizedSlope,1,30,origin);close(edgeSurfaceLength(resizedSlope,1,origin),30);
+close(planeData(face,origin).height(points[0]),10*FT+20*FT*.5);
+close(planeData({...face,pitch:12},origin).height(points[0]),30*FT);
+const east={...face,id:'E',name:'East',points:[points[1],{x:60*FT,y:0},{x:60*FT,y:20*FT},points[2]].map(p=>unproject(p,origin))};
+let joints=junctionReport([face,east],origin);assert.equal(joints.length,1);assert.equal(joints[0].status,'aligned');
+const raised={...east,id:'R',eave:12};joints=junctionReport([face,raised],origin);assert.equal(joints[0].status,'offset');close(joints[0].gapA/FT,-2);close(joints[0].gapB/FT,-2);
+const crossing={...east,id:'C',bearing:90};joints=junctionReport([face,crossing],origin);assert.equal(joints[0].status,'conflict');
+const offsetPair=structuredClone([face,raised]);let solved=solvePlaneJunctions(offsetPair,origin);assert.equal(solved.report[0].status,'offset');close(offsetPair[0].eave,face.eave);close(offsetPair[1].eave,raised.eave);close(offsetPair[1].pitch,raised.pitch);
+const conflictPair=structuredClone([face,crossing]);solved=solvePlaneJunctions(conflictPair,origin,{maxMove:100*FT});assert.equal(solved.report[0].status,'aligned');close(conflictPair[1].pitch,crossing.pitch);assert.equal(edgeKeyForTest(conflictPair[0].points[1],conflictPair[0].points[2]),edgeKeyForTest(conflictPair[1].points[0],conflictPair[1].points[3]));
+const nearGap=3/12*FT,nearLeft={...structuredClone(face),id:'NL',edges:['Eave','Rake','Ridge','Rake']},nearRight={...structuredClone(east),id:'NR',points:[{x:40*FT+nearGap,y:0},{x:60*FT,y:0},{x:60*FT,y:20*FT},{x:40*FT+nearGap,y:20*FT}].map(p=>unproject(p,origin)),edges:['Eave','Rake','Ridge','Rake']};
+const nearPitches=[nearLeft.pitch,nearRight.pitch];solved=solvePlaneJunctions([nearLeft,nearRight],origin,{snapTolerance:6/12*FT});assert.equal(solved.topology.changed,true);assert.equal(solved.report.length,1);assert.equal(solved.report[0].status,'aligned');assert.deepEqual([nearLeft.pitch,nearRight.pitch],nearPitches);assert.equal(edgeKeyForTest(nearLeft.points[1],nearLeft.points[2]),edgeKeyForTest(nearRight.points[0],nearRight.points[3]));
+const mainWithSplit={...structuredClone(face),id:'MS',edges:['Eave','Rake','Ridge','Rake']},touching={...structuredClone(face),id:'T',points:[{x:20*FT,y:20*FT+2/12*FT},{x:25*FT,y:25*FT},{x:15*FT,y:25*FT}].map(p=>unproject(p,origin)),edges:['Valley','Rake','Rake']};
+solved=solvePlaneJunctions([mainWithSplit,touching],origin,{snapTolerance:6/12*FT});assert.ok(solved.topology.inserted>=1);assert.ok(mainWithSplit.points.length>=5);assert.ok(mainWithSplit.points.some(a=>touching.points.some(b=>edgePointEqual(a,b))));
+const junctionPoint={x:2/12*FT,y:3/12*FT},makeVertexFace=(id,bearing,pitch,poly)=>{const result={id,name:id,points:poly.map(p=>unproject(p,origin)),edges:poly.map(()=>'Hip'),pitch,bearing,eave:0};const eq=planeEquation(result,origin);result.eave=(30*FT-eq.c)/FT;return result},vertexFaces=[makeVertexFace('V1',0,6,[junctionPoint,{x:-12*FT,y:2*FT},{x:-8*FT,y:14*FT}]),makeVertexFace('V2',120,8,[junctionPoint,{x:14*FT,y:2*FT},{x:7*FT,y:15*FT}]),makeVertexFace('V3',240,4,[junctionPoint,{x:-4*FT,y:-14*FT},{x:10*FT,y:-9*FT}])];
+const vertexPitches=vertexFaces.map(item=>item.pitch);assert.equal(vertexJunctionReport(vertexFaces,origin)[0].status,'conflict');solved=solvePlaneJunctions(vertexFaces,origin,{maxMove:2*FT});assert.equal(solved.vertexReport[0].status,'aligned');assert.ok(distance(project(vertexFaces[0].points[0],origin),{x:0,y:0})<1e-5);assert.deepEqual(vertexFaces.map(item=>item.pitch),vertexPitches);
+const cornerPoint={x:1*FT,y:1*FT},cornerA=makeVertexFace('CA',0,6,[cornerPoint,{x:-10*FT,y:2*FT},{x:-6*FT,y:12*FT}]),cornerB=makeVertexFace('CB',90,8,[cornerPoint,{x:12*FT,y:3*FT},{x:8*FT,y:-10*FT}]);
+assert.equal(vertexJunctionReport([cornerA,cornerB],origin)[0].status,'conflict');const cornerPitches=[cornerA.pitch,cornerB.pitch],cornerEaves=[cornerA.eave,cornerB.eave];solved=solvePlaneJunctions([cornerA,cornerB],origin,{maxMove:2*FT});assert.equal(solved.vertexReport[0].status,'aligned');assert.deepEqual([cornerA.pitch,cornerB.pitch],cornerPitches);assert.deepEqual([cornerA.eave,cornerB.eave],cornerEaves);
+const parallelVertexFaces=[0,1,2].map((offset,index)=>({id:`P${index}`,name:`P${index}`,points:[{x:0,y:0},{x:(index+1)*5*FT,y:10*FT},{x:(index-1)*5*FT,y:10*FT}].map(p=>unproject(p,origin)),edges:['Hip','Rake','Rake'],pitch:6,bearing:0,eave:10+offset}));
+const parallelPitches=parallelVertexFaces.map(item=>item.pitch);solved=solvePlaneJunctions(parallelVertexFaces,origin);assert.equal(solved.vertexReport[0].status,'conflict');assert.deepEqual(parallelVertexFaces.map(item=>item.pitch),parallelPitches);
+const equation=planeEquation(face,origin);close(equation.height(points[0]),planeData(face,origin).height(points[0]));
+console.log('PASS: geographic scale, polygon area, per-plane pitch, typed roof-line resizing (flat and sloped), edit recalculation, panel widths, lengths, direction, maximum-length flags, 3D heights, aligned/offset/conflicting shared-edge junctions, nearby vertex and edge snapping, automatic edge, two-plane corner, and three-plane junction solving, unsolvable conflict retention, crossed-polygon rejection');
+
+function edgeKeyForTest(a,b){return [a,b].map(p=>`${p.lat.toFixed(7)},${p.lng.toFixed(7)}`).sort().join('|')}
+function edgePointEqual(a,b){return `${a.lat.toFixed(7)},${a.lng.toFixed(7)}`===`${b.lat.toFixed(7)},${b.lng.toFixed(7)}`}

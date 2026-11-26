@@ -1,0 +1,422 @@
+import {previewWorkshop} from './preview-workshop.mjs';
+import {FT,project,unproject,area,distance,validPolygon,planeData,panelLayout,summarize,axes,resizeEdgeEndpoint,junctionReport,vertexJunctionReport,solvePlaneJunctions,gableHouseTemplate} from './geometry.mjs';
+import {createProjectState,snapshotProject,parseProject,REPORT_EDGE_TYPES} from './project.mjs';
+import {REPORT_TYPES,buildReportHtml} from './report.mjs';
+import {setupWallPanelControls} from './wall-panel-controls.mjs';
+import {getPanelProfile,selectedPan} from './panel-catalog.mjs';
+import {setupPanelCatalog} from './panel-catalog-controls.mjs';
+import {setupWallEditor} from './wall-editor.mjs';
+import {setupWallClickTools} from './wall-click-tools.mjs';
+import {getWalls} from './walls.mjs';
+import {setupRoofTrimControls} from './roof-trim-controls.mjs';
+import {addRoofOverhang} from './roof-trim.mjs';
+import {setupPlanImport} from './plan-import-ui.mjs';
+import {lookupReviewedPlan} from './reviewed-plans.mjs';
+import {plannerFileKind} from './file-import.mjs';
+import {buildPlanProject} from './plan-building.mjs';
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)],esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const colors={Unlabeled:'#dfeeff',Ridge:'#ffc44d',Hip:'#39cbff',Valley:'#ff7e91',Rake:'#be96ff',Eave:'#74e5c0',Flashing:'#f59d54'};
+const num=(n,d=0)=>n.toLocaleString('en-US',{maximumFractionDigits:d}),feet=n=>{let inches=Math.round(n*12);return `${Math.floor(inches/12)}′ ${inches%12}″`};
+let wallPanelControls,roofCatalog,wallCatalog;
+let state=createProjectState(),selected=null,selectedOutline=null,selectedEdge=null,step=1,tool='pan',draft=[],draftTargets=[],history=[],edgeType='Eave',view='map',locked=false,viewer=null,summary=null,outlineBusy=false,pendingCamera=null;
+const map=L.map('map',{center:[44.9385,-123.0303],zoom:18,maxZoom:23,minZoom:3,doubleClickZoom:false,zoomControl:true});
+async function generateHouse(){try{const width=+$('#houseWidth').value,depth=+$('#houseDepth').value,pitch=+$('#housePitch').value,wallHeight=+$('#wallHeight').value;if(state.faces.length&&!(await confirmReplacement('Replace the existing roof planes with this house? You can restore them with Undo.','Replace roof planes')))return;const center=map.getCenter(),origin={lat:center.lat,lng:center.lng},template=gableHouseTemplate({widthFeet:width,depthFeet:depth,pitch,eaveHeight:wallHeight}),toGeo=point=>unproject(point,origin),part={id:crypto.randomUUID(),name:'Main house',wallHeight:template.wallHeight,footprint:template.footprint.map(toGeo)};checkpoint();state.origin=origin;state.outlines=[];state.faces=template.faces.map(face=>({...face,id:crypto.randomUUID(),points:face.points.map(toGeo)}));state.wallOpenings=(state.wallOpenings||[]).filter(o=>(state.walls||[]).some(w=>w.id===o.wallId));state.building={kind:'multi-gable',parts:[part]};selected=state.faces[0].id;selectedOutline=null;selectedEdge=null;draft=[];draftTargets=[];$('#dialog').close();fit();render();updateEditor();toast('Editable gable house generated from typed dimensions. Drag corners or edit lines and pitches anytime.')}catch(err){toast(err.message)}}
+function addBuildingPart(){try{const name=$('#partType').value,width=+$('#partWidth').value,depth=+$('#partDepth').value,pitch=+$('#partPitch').value,wallHeight=+$('#partWallHeight').value,x=+$('#partX').value,y=+$('#partY').value,origin=state.origin||map.getCenter(),template=gableHouseTemplate({widthFeet:width,depthFeet:depth,pitch,eaveHeight:wallHeight,centerXFeet:x,centerYFeet:y,name}),toGeo=point=>unproject(point,origin),part={id:crypto.randomUUID(),name,wallHeight:template.wallHeight,footprint:template.footprint.map(toGeo)};checkpoint();state.origin=origin;state.faces.push(...template.faces.map(face=>({...face,id:crypto.randomUUID(),points:face.points.map(toGeo)})));const legacy=state.building?.footprint?[{id:crypto.randomUUID(),name:'Main house',wallHeight:state.building.wallHeight,footprint:state.building.footprint}]:[];state.building={kind:'multi-gable',parts:[...(state.building?.parts||legacy),part]};selected=state.faces.at(-1).id;$('#dialog').close();fit();render();updateEditor();toast(`${name} section added. Drag it into place or edit its roof planes and edges anytime.`)}catch(err){toast(err.message)}}
+const tiles=L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxNativeZoom:19,maxZoom:23,crossOrigin:true,attribution:'Imagery © Esri, Vantor, Earthstar Geographics, GIS User Community'}).addTo(map);
+L.control.scale({metric:false,imperial:true,position:'bottomleft',maxWidth:140}).addTo(map);
+const shapes=L.layerGroup().addTo(map),handles=L.layerGroup().addTo(map),draftLayer=L.layerGroup().addTo(map),snapGuide=L.layerGroup().addTo(map);
+if(!$('#junctionStatus'))$('#edgeSummary').insertAdjacentHTML('beforebegin','<div id="junctionStatus"></div>');
+if(!$('#snapTolerance'))$('#snapJunctions').insertAdjacentHTML('beforebegin','<label for="snapTolerance">Junction snap tolerance <output id="snapToleranceValue">6 in</output></label><input id="snapTolerance" type="range" min="0.5" max="24" step="0.5" value="6">');
+let loadedTiles=0;tiles.on('tileload',()=>{loadedTiles++;if($('#mapStatus').textContent==='Loading aerial imagery…')$('#mapStatus').textContent='Salem, Oregon · find your property';$('#mapError').hidden=true});tiles.on('tileerror',()=>{if(!loadedTiles){$('#mapError').textContent='Aerial imagery could not load. Check your connection; you can still work in Plan view.';$('#mapError').hidden=false}});
+function toast(t){$('#toast').textContent=t;$('#toast').style.display='block';clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('#toast').style.display='none',3500)}
+function checkpoint(){history.push(JSON.stringify(state));if(history.length>60)history.shift();$('#undo').disabled=false;$('#saveStatus').textContent='Unsaved changes'}
+function face(){return state.faces.find(f=>f.id===selected)}
+function lat(p){return [p.lat,p.lng]}
+const coarsePointer=()=>matchMedia('(pointer: coarse)').matches||innerWidth<=700,snapRadius=()=>coarsePointer()?30:18;
+function snapDetail(ll,excluded=[],bypass=false){
+ const free={point:{lat:ll.lat,lng:ll.lng},kind:'free',label:'Free placement'};if(bypass||state.settings.autoSnap===false)return free;
+ const target=map.latLngToContainerPoint(ll),limit=snapRadius(),isExcluded=(id,index)=>excluded.some(e=>e[0]===id&&e[1]===index),edgeExcluded=(owner,index)=>isExcluded(owner.id,index)||isExcluded(owner.id,(index+1)%owner.points.length),screen=p=>map.latLngToContainerPoint(lat(p));let best={...free,priority:99,distance:Infinity};
+ const consider=(candidate,priority,d)=>{if(d<=limit&&(priority<best.priority||(priority===best.priority&&d<best.distance)))best={...candidate,priority,distance:d}};
+ const facePointCounts=new Map();for(const roof of state.faces)for(const point of roof.points){const key=edgePointKey(point);facePointCounts.set(key,(facePointCounts.get(key)||0)+1)}
+ for(const roof of state.faces)for(let i=0;i<roof.points.length;i++){if(isExcluded(roof.id,i))continue;const point=roof.points[i],shared=facePointCounts.get(edgePointKey(point))>1;consider({point:{...point},kind:shared?'shared-vertex':'roof-vertex',label:shared?'Shared roof point':'Roof point',ownerType:'face',id:roof.id,index:i},shared?0:1,target.distanceTo(screen(point)))}
+ const faceEdges=[];for(const roof of state.faces)for(let i=0;i<roof.points.length;i++){if(edgeExcluded(roof,i))continue;const a=screen(roof.points[i]),b=screen(roof.points[(i+1)%roof.points.length]),ab=b.subtract(a),den=ab.x*ab.x+ab.y*ab.y;if(!den)continue;const t=Math.max(0,Math.min(1,((target.x-a.x)*ab.x+(target.y-a.y)*ab.y)/den)),q=L.point(a.x+ab.x*t,a.y+ab.y*t);if(t>.001&&t<.999){const hit=map.containerPointToLatLng(q);consider({point:{lat:hit.lat,lng:hit.lng},kind:'roof-edge',label:`${roof.edges[i]||'Roof'} edge`,ownerType:'face',id:roof.id,index:i,key:edgeKey(roof.points[i],roof.points[(i+1)%roof.points.length])},2,target.distanceTo(q))}faceEdges.push({roof,index:i,a,b})}
+ for(let i=0;i<faceEdges.length;i++)for(let j=i+1;j<faceEdges.length;j++){const first=faceEdges[i],second=faceEdges[j];if(first.roof.id===second.roof.id)continue;const r=first.b.subtract(first.a),s=second.b.subtract(second.a),den=r.x*s.y-r.y*s.x;if(Math.abs(den)<1e-7)continue;const qp=second.a.subtract(first.a),t=(qp.x*s.y-qp.y*s.x)/den,u=(qp.x*r.y-qp.y*r.x)/den;if(t<=.001||t>=.999||u<=.001||u>=.999)continue;const q=L.point(first.a.x+r.x*t,first.a.y+r.y*t),hit=map.containerPointToLatLng(q);consider({point:{lat:hit.lat,lng:hit.lng},kind:'roof-intersection',label:'Roof-line intersection'},2,target.distanceTo(q))}
+ for(const outline of state.outlines||[]){for(let i=0;i<outline.points.length;i++){const point=outline.points[i];consider({point:{...point},kind:'outline-vertex',label:'Outline point',ownerType:'outline',id:outline.id,index:i},3,target.distanceTo(screen(point)))}for(let i=0;i<outline.points.length;i++){const a=screen(outline.points[i]),b=screen(outline.points[(i+1)%outline.points.length]),ab=b.subtract(a),den=ab.x*ab.x+ab.y*ab.y;if(!den)continue;const t=Math.max(0,Math.min(1,((target.x-a.x)*ab.x+(target.y-a.y)*ab.y)/den)),q=L.point(a.x+ab.x*t,a.y+ab.y*t);if(t>.001&&t<.999){const hit=map.containerPointToLatLng(q);consider({point:{lat:hit.lat,lng:hit.lng},kind:'outline-edge',label:'Roof outline',ownerType:'outline',id:outline.id,index:i},3,target.distanceTo(q))}}}
+ if(state.settings.gridSnap!==false){const gridOrigin=draft[0]||state.origin,local=project(ll,gridOrigin),grid={x:Math.round(local.x/FT)*FT,y:Math.round(local.y/FT)*FT},point=unproject(grid,gridOrigin);consider({point,kind:'grid',label:'Recommended 1 ft grid'},4,target.distanceTo(screen(point)))}
+ return best;
+}
+function snap(ll,excluded=[],bypass=false){return snapDetail(ll,excluded,bypass).point}
+function showSnapPreview(detail,from=null){snapGuide.clearLayers();if(!detail||detail.kind==='free')return;const color=detail.kind==='grid'?'#ffc44d':'#5ef2c3';if(from)L.polyline([lat(from),lat(detail.point)],{interactive:false,color,weight:2,dashArray:'4 5',opacity:.85}).addTo(snapGuide);L.circleMarker(lat(detail.point),{interactive:false,radius:coarsePointer()?12:9,color:'#fff',weight:3,fillColor:color,fillOpacity:.35,className:'snap-preview'}).addTo(snapGuide).bindTooltip(detail.label,{permanent:true,direction:'top',offset:[0,-10],className:'snap-preview-label'}).openTooltip()}
+function clearSnapPreview(){snapGuide.clearLayers()}
+function moveConnected(oldPoints,delta){const moves=new Map(oldPoints.map(point=>[edgePointKey(point),unproject({x:project(point,state.origin).x+delta.x,y:project(point,state.origin).y+delta.y},state.origin)]));for(const roof of state.faces)for(let i=0;i<roof.points.length;i++){const next=moves.get(edgePointKey(roof.points[i]));if(next)roof.points[i]={...next}}}
+function edgePointKey(point){return `${point.lat.toFixed(7)},${point.lng.toFixed(7)}`}
+function solveConnected(announce=false){if(state.settings.autoSnap===false)return {changed:false,report:junctionReport(state.faces,state.origin),vertexReport:vertexJunctionReport(state.faces,state.origin)};const result=solvePlaneJunctions(state.faces,state.origin,{fixedFaceId:selected,snapTolerance:(state.settings.snapTolerance??6)/12*FT});if(announce)toast([...result.report,...result.vertexReport].some(j=>j.status!=='aligned')?'Some junctions need manual adjustment; unsafe moves were left unchanged.':result.changed?`Connected junctions snapped together${result.topology?.inserted?` with ${result.topology.inserted} shared point${result.topology.inserted===1?'':'s'}`:''}.`:'Shared junctions are already aligned.');return result}
+function setTool(t){tool=t;$('#pan').classList.toggle('active',t==='pan');$('#draw').classList.toggle('active',t==='draw');$('#autoOutline').classList.toggle('active',t==='auto');$('#drawControls').hidden=t!=='draw';map.getContainer().style.cursor=t==='draw'?'crosshair':t==='auto'?'cell':'';$('#mapTip').textContent=t==='draw'?'Click plane corners · points snap to outlines, vertices, and edges':t==='auto'?'Click the building you want to outline':step===2?'Click once to select a line, then choose its label':'Select a plane · drag white corners · small dots add corners';if(t==='pan'&&outlineBusy&&(face()||state.outlines.length))$('#mapStatus').textContent='Overall outline added · draw individual roof planes inside it';if((t==='draw'||t==='auto')&&view==='three')setView('map');render()}
+$('#draw').onclick=()=>{draft=[];draftTargets=[];clearSnapPreview();setTool('draw');if(innerWidth<600)document.querySelector('.workspace').scrollIntoView({behavior:'smooth'})};$('#autoOutline').onclick=()=>{draft=[];draftTargets=[];clearSnapPreview();setTool('auto');toast('Click the house or building you want to outline.');if(innerWidth<600)document.querySelector('.workspace').scrollIntoView({behavior:'smooth'})};$('#pan').onclick=()=>{draft=[];draftTargets=[];clearSnapPreview();setTool('pan')};$('#cancel').onclick=()=>{draft=[];draftTargets=[];clearSnapPreview();setTool('pan')};
+map.on('mousemove',e=>{if(tool!=='draw')return clearSnapPreview();const detail=snapDetail(e.latlng,[],Boolean(e.originalEvent?.altKey));showSnapPreview(detail,draft.at(-1))});map.on('mouseout',()=>{if(tool==='draw')clearSnapPreview()});
+map.on('click',e=>{if(document.body.dataset.wallTool==='draw-wall'){document.dispatchEvent(new CustomEvent('wall-plan-point',{detail:{lat:e.latlng.lat,lng:e.latlng.lng}}));return}if(tool==='auto'){autoOutline(e.latlng);return}if(tool!=='draw')return;const detail=snapDetail(e.latlng,[],Boolean(e.originalEvent?.altKey)),p=detail.point;clearSnapPreview();if(draft.length>=3&&map.latLngToContainerPoint(lat(draft[0])).distanceTo(map.latLngToContainerPoint(lat(p)))<snapRadius()){finish();return}if(draft.length&&distance(project(p,state.origin),project(draft.at(-1),state.origin))<.04)return;draft.push(p);draftTargets.push(detail);drawDraft()});
+function drawDraft(){draftLayer.clearLayers();if(draft.length){L.polyline(draft.map(lat),{color:'#5edaff',weight:3,dashArray:'6 5'}).addTo(draftLayer);draft.forEach((p,i)=>L.circleMarker(lat(p),{radius:i===0?8:5,color:'white',weight:2,fillColor:'#20b6ed',fillOpacity:1}).addTo(draftLayer).on('click',e=>{L.DomEvent.stopPropagation(e);if(i===0&&draft.length>=3)finish()}))}$('#finish').disabled=draft.length<3;$('#drawHint').textContent=`${draft.length} corners placed. Click each corner; click the first point or Finish to close.`}
+function insideOutline(p,outline){const point=project(p,state.origin),poly=outline.points.map(q=>project(q,state.origin));let inside=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];if((a.y>point.y)!==(b.y>point.y)&&point.x<(b.x-a.x)*(point.y-a.y)/(b.y-a.y)+a.x)inside=!inside}return inside||poly.some((a,i)=>{const b=poly[(i+1)%poly.length],ab={x:b.x-a.x,y:b.y-a.y},t=Math.max(0,Math.min(1,((point.x-a.x)*ab.x+(point.y-a.y)*ab.y)/(ab.x*ab.x+ab.y*ab.y||1)));return distance(point,{x:a.x+ab.x*t,y:a.y+ab.y*t})<.08})}
+function finish(){if(draft.length<3)return toast('Place at least three corners.');const origin=(state.faces.length||state.outlines.length)?state.origin:draft[0];if(!validPolygon(draft.map(p=>project(p,origin))))return toast('Plane crosses itself or is too small. Undo the last point and try again.');if(state.outlines.length&&!draft.every(p=>state.outlines.some(o=>insideOutline(p,o))))return toast('Keep every plane corner inside or snapped to the overall outline.');checkpoint();if(!state.faces.length&&!state.outlines.length)state.origin={...draft[0]};for(const target of draftTargets)if(target.kind==='roof-edge'&&target.ownerType==='face'){const other=state.faces.find(f=>f.id===target.id),at=other?.points.findIndex((a,i)=>edgeKey(a,other.points[(i+1)%other.points.length])===target.key);if(at>=0){other.points.splice(at+1,0,{...target.point});other.edges.splice(at+1,0,other.edges[at])}}const f={id:crypto.randomUUID(),name:`Plane ${state.faces.length+1}`,type:'Main roof',pitch:6,bearing:180,eave:10,points:structuredClone(draft),edges:draft.map(()=>'Unlabeled')};state.faces.push(f);selected=f.id;selectedOutline=null;draft=[];draftTargets=[];clearSnapPreview();setTool('pan');solveConnected();updateEditor();toast('Roof plane added. Snapped points share the existing outline or plane geometry.')}
+function pointInPolygon(point,polygon){let inside=false;for(let i=0,j=polygon.length-1;i<polygon.length;j=i++){const a=polygon[i],b=polygon[j];if((a.lat>point.lat)!==(b.lat>point.lat)&&point.lng<(b.lng-a.lng)*(point.lat-a.lat)/(b.lat-a.lat)+a.lng)inside=!inside}return inside}
+function footprintRings(elements){const rings=[];for(const el of elements||[]){if(el.type==='way'&&Array.isArray(el.geometry))rings.push(el.geometry);if(el.type==='relation')for(const member of el.members||[])if(member.role==='outer'&&Array.isArray(member.geometry))rings.push(member.geometry)}return rings.map(r=>{const points=r.map(p=>({lat:p.lat,lng:p.lon}));if(points.length>1&&distance(project(points[0],points[0]),project(points.at(-1),points[0]))<.03)points.pop();return points}).filter(p=>p.length>=3&&p.length<=300)}
+async function autoOutline(click){if(outlineBusy)return;outlineBusy=true;$('#autoOutline').disabled=true;$('#mapStatus').textContent='Looking for a public building outline…';try{const query=`[out:json][timeout:12];nwr["building"](around:55,${click.lat.toFixed(7)},${click.lng.toFixed(7)});out geom;`,r=await fetch('https://overpass-api.de/api/interpreter',{method:'POST',body:new URLSearchParams({data:query}),signal:AbortSignal.timeout(18000)});if(!r.ok)throw Error('Building outline service unavailable');const data=await r.json(),rings=footprintRings(data.elements),localOrigin=(state.faces.length||state.outlines.length)?state.origin:{lat:click.lat,lng:click.lng};const candidates=rings.map(points=>{const xy=points.map(p=>project(p,localOrigin)),center=xy.reduce((s,p)=>({x:s.x+p.x/xy.length,y:s.y+p.y/xy.length}),{x:0,y:0});return {points,inside:pointInPolygon(click,points),distance:distance(project(click,localOrigin),center),size:area(xy)}}).filter(x=>x.size>.5&&validPolygon(x.points.map(p=>project(p,localOrigin)))).sort((a,b)=>(b.inside-a.inside)||(a.distance-b.distance));const found=candidates[0];if(!found||(!found.inside&&found.distance>28))throw Error('No public building outline was found at that spot');checkpoint();if(!state.faces.length&&!state.outlines.length)state.origin={...found.points[0]};const outline={id:crypto.randomUUID(),name:`Roof outline ${state.outlines.length+1}`,points:structuredClone(found.points)};state.outlines.push(outline);selected=null;selectedOutline=outline.id;selectedEdge=null;setTool('pan');updateEditor();fit();toast('Overall outline added as a snap guide. Now draw the individual roof planes inside it.')}catch(err){toast(`${err.message}. Use Draw plane to trace it manually.`);$('#mapStatus').textContent='Automatic outline unavailable here · manual drawing is ready'}finally{outlineBusy=false;$('#autoOutline').disabled=false}}
+$('#finish').onclick=finish;$('#undo').onclick=()=>{if(draft.length){draft.pop();draftTargets.pop();drawDraft();return}if(!history.length)return toast('Nothing to undo.');const previous=JSON.parse(history.pop());if(previous.planImportUndo){restoreBeforePlanImport(previous.project);return}state=previous;$('#address').value=state.address;state.outlines||=[];if(!face())selected=state.faces.at(-1)?.id||null;settingsToUI();render();updateEditor();toast('Last edit undone')};
+document.addEventListener('keydown',e=>{if(/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;if(e.key==='Escape'){draft=[];draftTargets=[];clearSnapPreview();setTool('pan')}if(e.key==='Enter'&&tool==='draw')finish();if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();$('#undo').click()}});
+function select(id){selected=id;selectedOutline=null;render();updateEditor()}
+function edgeKey(a,b){return [a,b].map(p=>`${p.lat.toFixed(7)},${p.lng.toFixed(7)}`).sort().join('|')}
+function edgeRecords(){const result=new Map();for(const f of state.faces){const d=planeData(f,state.origin);f.points.forEach((a,i)=>{const b=f.points[(i+1)%f.points.length],key=edgeKey(a,b),p=d.points[i],q=d.points[(i+1)%f.points.length],length=Math.hypot(distance(p,q),d.height(p)-d.height(q))/FT;const old=result.get(key);if(!old||length>old.length)result.set(key,{a,b,key,length,type:f.edges[i],face:f,index:i})})}return [...result.values()]}
+function getEdgeTotals(){const totals=Object.fromEntries(REPORT_EDGE_TYPES.map(type=>[type,0]));for(const edge of edgeRecords())if(Object.hasOwn(totals,edge.type))totals[edge.type]+=edge.length;return totals}
+function currentEdge(){return selectedEdge?edgeRecords().find(e=>e.key===selectedEdge):null}
+function updateEdgeEditor(){const edge=currentEdge();$('#edgeEditor').hidden=!edge;if(!edge)return;const inches=Math.round(edge.length*12*8)/8,wholeFeet=Math.floor(inches/12),remainder=Math.round((inches-wholeFeet*12)*8)/8;$('#edgeEditorName').textContent=`${edge.face.name} · current ${feet(edge.length)}`;$('#edgeLabel').value=edge.type;$('#edgeFeet').value=wholeFeet;$('#edgeInches').value=remainder}
+function applyEdge(key,type,announce=true){const matches=[];for(const f of state.faces)f.points.forEach((p,i)=>{if(edgeKey(p,f.points[(i+1)%f.points.length])===key)matches.push([f,i])});if(!matches.length)return false;if(matches.every(([f,i])=>f.edges[i]===type)){selectedEdge=key;updateEdgeEditor();return false}checkpoint();for(const [f,i]of matches)f.edges[i]=type;selectedEdge=key;edgeType=type;render();updateEdgeEditor();if(step===2)$$('[data-edge]').forEach(button=>button.classList.toggle('active',button.dataset.edge===type));if(announce)toast(type+' roof line saved');return true}
+function chooseEdge(edge){selected=edge.face.id;selectedOutline=null;selectedEdge=edge.key;render();updateEditor();updateEdgeEditor();toast('Roof line selected. Choose a type or enter its measured length.')}
+$('#applyEdgeMeasurement').onclick=()=>{const edge=currentEdge(),feetValue=Number($('#edgeFeet').value),inchesValue=Number($('#edgeInches').value),type=$('#edgeLabel').value;if(!edge)return toast('Click a roof line first.');if(!Number.isFinite(feetValue)||!Number.isFinite(inchesValue)||feetValue<0||inchesValue<0||inchesValue>=12)return toast('Enter feet and 0 to 11.875 inches.');const target=feetValue+inchesValue/12;if(target<.25||target>1000)return toast('Enter a roof-line length from 3 inches to 1,000 feet.');const before=structuredClone(state),oldKey=edge.key,oldEnd={...edge.b};checkpoint();try{const moved=resizeEdgeEndpoint(edge.face,edge.index,target,state.origin);for(const f of state.faces)f.points.forEach((p,i)=>{if(edgeKey(p,f.points[(i+1)%f.points.length])===oldKey)f.edges[i]=type});for(const f of state.faces)f.points.forEach((p,i)=>{if(distance(project(p,state.origin),project(oldEnd,state.origin))<.025)f.points[i]={...moved}});if(state.faces.some(f=>!validPolygon(f.points.map(p=>project(p,state.origin)))))throw Error('That length would cross another roof line');selectedEdge=edgeKey(edge.a,moved);render();updateEditor();updateEdgeEditor();toast(`Roof line set to ${feet(target)}. Dragging the corners is still available.`)}catch(err){state=before;history.pop();render();updateEditor();updateEdgeEditor();toast(err.message)}};
+const commitSelectedEdgeLabel=e=>{const edge=currentEdge();if(edge)applyEdge(edge.key,e.target.value)};$('#edgeLabel').oninput=commitSelectedEdgeLabel;$('#edgeLabel').onchange=commitSelectedEdgeLabel;
+function render(){
+ wallPanelControls?.sync();
+ if($('#focus3d').getAttribute('aria-pressed')!=='true'){
+  $('#threeHint').textContent=step===5&&state.wallPanels?.show?'Drag to orbit · click a wall panel for its cut sheet':'Drag to orbit · scroll to zoom';
+ }
+ const references = document.getElementById('planSourceReferences');
+ if (references) references.hidden = !(state.building?.parts || []).some(part=>part.planSource);
+ summary=summarize(state.faces,state.origin,state.settings);shapes.clearLayers();handles.clearLayers();drawDraft();for(const wall of state.walls||[])L.polyline([lat(wall.a),lat(wall.b)],{color:'#edc383',weight:5}).bindTooltip(esc(wall.name)+' · '+wall.height+' ft high').addTo(shapes);
+ for(const outline of state.outlines||[]){const active=outline.id===selectedOutline,poly=L.polygon(outline.points.map(lat),{color:active?'#ffffff':'#35d3ff',weight:active?5:3,dashArray:'10 7',fillColor:'#35d3ff',fillOpacity:.035}).addTo(shapes);poly.on('click',e=>{if(tool==='draw'||tool==='auto'||document.body.dataset.wallTool==='draw-wall'){map.fire('click',{latlng:e.latlng,originalEvent:e.originalEvent});return}L.DomEvent.stopPropagation(e);selected=null;selectedEdge=null;selectedOutline=outline.id;render();updateEditor()});L.tooltip({permanent:true,direction:'center',className:'outline-tag'}).setLatLng(poly.getBounds().getCenter()).setContent(`${esc(outline.name)} · snap guide`).addTo(shapes);if(active&&tool==='pan')outline.points.forEach((p,i)=>{const marker=L.marker(lat(p),{draggable:true,title:`${outline.name} corner ${i+1}`,icon:L.divIcon({className:'outline-vertex',iconSize:[44,44],iconAnchor:[22,22]})}).addTo(handles);let before;marker.on('dragstart',()=>{checkpoint();before=structuredClone(state)});marker.on('drag',e=>{const detail=snapDetail(marker.getLatLng(),[[outline.id,i]],Boolean(e.originalEvent?.altKey));outline.points[i]={...detail.point};marker.setLatLng(lat(detail.point));poly.setLatLngs(outline.points.map(lat));showSnapPreview(detail)});marker.on('dragend',()=>{clearSnapPreview();if(!validPolygon(outline.points.map(q=>project(q,state.origin)))){state=before;history.pop();toast('That move made the outline invalid; it was restored.')}render()})})}
+ for(const row of summary.rows){const f=row.face,active=f.id===selected;const poly=L.polygon(f.points.map(lat),{color:active?'#66dcff':'#d5f7ff',weight:active?3:2,fillColor:state.settings.color,fillOpacity:$('#showPanels').checked?.4:.15}).addTo(shapes);poly.on('click',e=>{if(tool==='draw'||tool==='auto'||document.body.dataset.wallTool==='draw-wall'){map.fire('click',{latlng:e.latlng});return}L.DomEvent.stopPropagation(e);select(f.id)});
+  const center=poly.getBounds().getCenter();L.tooltip({permanent:true,direction:'center',className:'face-tag',interactive:false}).setLatLng(center).setContent(`${esc(f.name)} · ${num(row.surface/FT**2)} ft²`).addTo(shapes);
+  if($('#showPanels').checked)for(const panel of row.panels)L.polygon(panel.polygon.map(p=>lat(unproject(p,state.origin))),{interactive:false,color:panel.oversize?'#ffb95c':'#c3e8f7',weight:1,fillColor:state.settings.color,fillOpacity:.35}).addTo(shapes);
+  const c=project({lat:center.lat,lng:center.lng},state.origin),v=axes(f.bearing).v,len=Math.max(1,Math.min(4,Math.sqrt(row.flat)/4));const end={x:c.x+v.x*len,y:c.y+v.y*len},back={x:end.x-v.x*.8,y:end.y-v.y*.8};L.polyline([unproject(c,state.origin),unproject(end,state.origin)].map(lat),{interactive:false,color:'#62ddff',weight:3}).addTo(shapes);L.polyline([{x:back.x-v.y*.45,y:back.y+v.x*.45},end,{x:back.x+v.y*.45,y:back.y-v.x*.45}].map(p=>lat(unproject(p,state.origin))),{interactive:false,color:'#62ddff',weight:3}).addTo(shapes);
+   if(active&&tool==='pan'){const planeStart={lat:center.lat,lng:center.lng},planePoints=structuredClone(f.points),planeMover=L.marker(lat(planeStart),{draggable:true,keyboard:true,title:`Move ${f.name} with connected geometry`,icon:L.divIcon({className:'face-move',iconSize:[44,44],iconAnchor:[22,22]})}).addTo(handles);let planeBefore;planeMover.on('dragstart',()=>{checkpoint();planeBefore=structuredClone(state)});planeMover.on('dragend',()=>{const start=project(planeStart,state.origin),end=project(planeMover.getLatLng(),state.origin);moveConnected(planePoints,{x:end.x-start.x,y:end.y-start.y});if(state.faces.some(x=>!validPolygon(x.points.map(q=>project(q,state.origin))))){state=planeBefore;history.pop();toast('That plane move crossed an edge; it was restored.')}else solveConnected();selectedEdge=null;render();updateEditor()});f.points.forEach((p,i)=>{
+   const marker=L.marker(lat(p),{draggable:true,keyboard:true,title:`${f.name} corner ${i+1}: drag to adjust`,icon:L.divIcon({className:'vertex',iconSize:[44,44],iconAnchor:[22,22]})}).addTo(handles);let linked=[],before;
+   marker.on('dragstart',()=>{checkpoint();before=structuredClone(state);linked=[];for(const other of state.faces)other.points.forEach((q,j)=>{if(distance(project(q,state.origin),project(p,state.origin))<.025)linked.push([other.id,j])})});
+   marker.on('drag',e=>{const detail=snapDetail(marker.getLatLng(),linked,Boolean(e.originalEvent?.altKey)),q=detail.point;marker.setLatLng(lat(q));for(const [id,j]of linked)state.faces.find(x=>x.id===id).points[j]={...q};poly.setLatLngs(f.points.map(lat));showSnapPreview(detail);summary=summarize(state.faces,state.origin,state.settings);updateMetrics()});
+    marker.on('dragend',()=>{clearSnapPreview();if(state.faces.some(x=>!validPolygon(x.points.map(q=>project(q,state.origin))))){state=before;history.pop();toast('That move crosses an edge; the corner was restored.')}else solveConnected();selectedEdge=null;render();updateEditor()});
+   marker.on('contextmenu',()=>{if(f.points.length<=3)return toast('A plane needs at least three corners.');checkpoint();f.points.splice(i,1);f.edges.splice(i,1);render();toast('Corner removed. Undo is available.')});
+    const q=f.points[(i+1)%f.points.length],mid={lat:(p.lat+q.lat)/2,lng:(p.lng+q.lng)/2},edgeMover=L.marker(lat(mid),{draggable:true,keyboard:true,title:'Drag this edge · click to add a corner',icon:L.divIcon({className:'edge-handle',iconSize:[44,44],iconAnchor:[22,22]})}).addTo(handles);let edgeBefore,edgeDragged=false,edgeSnap=null;edgeMover.on('dragstart',()=>{checkpoint();edgeBefore=structuredClone(state);edgeDragged=false;edgeSnap=null});edgeMover.on('drag',e=>{edgeDragged=true;edgeSnap=snapDetail(edgeMover.getLatLng(),[],Boolean(e.originalEvent?.altKey));edgeMover.setLatLng(lat(edgeSnap.point));showSnapPreview(edgeSnap)});edgeMover.on('dragend',()=>{clearSnapPreview();if(!edgeDragged){history.pop();return}const start=project(mid,state.origin),end=project((edgeSnap||{point:edgeMover.getLatLng()}).point,state.origin);moveConnected([p,q],{x:end.x-start.x,y:end.y-start.y});if(state.faces.some(x=>!validPolygon(x.points.map(point=>project(point,state.origin))))){state=edgeBefore;history.pop();toast('That edge move crossed another line; it was restored.')}else solveConnected();selectedEdge=null;render();updateEditor()});edgeMover.on('click',()=>{if(edgeDragged)return;checkpoint();const key=edgeKey(p,q);for(const other of state.faces){const at=other.points.findIndex((a,j)=>edgeKey(a,other.points[(j+1)%other.points.length])===key);if(at!==-1){other.points.splice(at+1,0,{...mid});other.edges.splice(at+1,0,other.edges[at])}}render();toast('Corner added to every matching edge. Drag it to position.')});
+  })}
+ }
+ for(const edge of edgeRecords()){const active=edge.key===selectedEdge,activate=e=>{L.DomEvent.stopPropagation(e);if(tool==='draw'||tool==='auto'||document.body.dataset.wallTool==='draw-wall'){map.fire('click',{latlng:e.latlng,originalEvent:e.originalEvent});return}chooseEdge(edge)},points=[lat(edge.a),lat(edge.b)];L.polyline(points,{color:'#fff',weight:coarsePointer()?34:20,opacity:.001,className:'edge-hit'}).addTo(shapes).on('click',activate).bindTooltip(`${edge.type} · ${feet(edge.length)} · click to edit`,{sticky:true});L.polyline(points,{color:active?'#ffffff':colors[edge.type],weight:active?9:step===2?7:4,opacity:.95,interactive:false}).addTo(shapes);if(state.faces.length<=12){L.tooltip({permanent:true,interactive:true,direction:'center',offset:[0,-15],className:`measure-tag${active?' selected':''}`}).setLatLng([(edge.a.lat+edge.b.lat)/2,(edge.a.lng+edge.b.lng)/2]).setContent(`<button type="button" aria-label="Edit ${esc(edge.type)} roof line ${feet(edge.length)}">${feet(edge.length)}</button>`).addTo(shapes).on('click',activate)}}
+ for(const wall of getWalls(state)){const a=unproject(wall.a,state.origin),b=unproject(wall.b,state.origin),line=L.polyline([lat(a),lat(b)],{color:'#edc383',weight:5,interactive:false}).bindTooltip(esc(wall.name)+' · click to add door/window').addTo(shapes),hit=L.polyline([lat(a),lat(b)],{color:'#edc383',weight:22,opacity:0,interactive:step!==2&&step!==3}).addTo(shapes);hit.on('click',e=>{L.DomEvent.stopPropagation(e);const p=project(e.latlng,state.origin),dx=wall.b.x-wall.a.x,dy=wall.b.y-wall.a.y,t=Math.max(0,Math.min(1,((p.x-wall.a.x)*dx+(p.y-wall.a.y)*dy)/(dx*dx+dy*dy)));document.dispatchEvent(new CustomEvent('wall-picked',{detail:{wallId:wall.id,offset:t*wall.widthFeet}}))})}
+ updateMetrics();$('#outlines').innerHTML=state.outlines.length?state.outlines.map(o=>`<button class="plane ${o.id===selectedOutline?'active':''}" data-outline="${o.id}"><span><strong>${esc(o.name)}</strong><small>Snap guide · excluded from 3D and takeoff</small></span></button>`).join(''):'<p class="empty">Auto-outline creates a snap guide, not a roof plane.</p>';$$('[data-outline]').forEach(b=>b.onclick=()=>{selected=null;selectedEdge=null;selectedOutline=b.dataset.outline;render();updateEditor()});$('#outlineCount').textContent=state.outlines.length;$('#planes').innerHTML=summary.rows.length?summary.rows.map(r=>`<button class="plane ${r.face.id===selected?'active':''}" data-id="${r.face.id}"><span><strong>${esc(r.face.name)}</strong><small>${esc(r.face.type)} · ${r.face.pitch}/12 · ${r.face.bearing}°</small></span><em>${num(r.surface/FT**2)} ft²</em></button>`).join(''):'<p class="empty">Draw individual roof planes inside the outline.</p>';$$('.plane[data-id]').forEach(b=>b.onclick=()=>select(b.dataset.id));$('#planeCount').textContent=state.faces.length;$('#faceEditor').hidden=!face();$('#undo').disabled=!history.length&&!draft.length;updateEdgeEditor();if(view==='three')render3D();
+}
+function updateMetrics(){for(const [id,val]of Object.entries({flatArea:num(summary.flat,1),slopeArea:num(summary.surface,1),squares:num(summary.surface/100,2),count:state.faces.length,panelCount:summary.count,longest:feet(summary.longest),orderArea:num(summary.orderArea,1)+' sq ft',cutWaste:summary.orderArea?num(Math.max(0,(summary.orderArea-summary.surface)/summary.orderArea*100),1)+'%':'0%'}))$('#'+id).textContent=val;$('#lengthWarning').hidden=!summary.oversize;$('#lengthWarning').textContent=`${summary.oversize} panels exceed your ${state.settings.maxLength} ft maximum. They are flagged in the cut list. Increase the limit or have a fabricator design end laps.`;const edgeJoins=junctionReport(state.faces,state.origin),vertexJoins=vertexJunctionReport(state.faces,state.origin),joins=[...edgeJoins,...vertexJoins],bad=joins.filter(j=>j.status!=='aligned'),aligned=joins.length-bad.length,detail=bad.slice(0,3).map(j=>j.kind==='vertex'?`${j.faces.map(face=>face.name).join(' / ')} shared corner`:`${j.left.face.name} ↔ ${j.right.face.name} (${j.left.face.edges[j.left.index]||'edge'} / ${j.right.face.edges[j.right.index]||'edge'})`).map(esc).join('; ');$('#junctionStatus').innerHTML=state.faces.length<2?'<div class="junction neutral"><b>3D junctions</b><span>Add adjoining planes to validate shared edges.</span></div>':!joins.length?`<div class="junction warning"><b>No shared plane edges</b><span>Move adjoining corners or edges within ${num(state.settings.snapTolerance??6,1)} inches, then reconcile the junctions.</span></div>`:bad.length?`<div class="junction danger"><b>${bad.length} unresolved 3D junction${bad.length===1?'':'s'}</b><span>${aligned} aligned. Check: ${detail}. Pitch and dimensions were left unchanged where a bounded mathematical solution was unavailable.</span></div>`:`<div class="junction good"><b>${aligned} aligned 3D junction${aligned===1?'':'s'}</b><span>Shared edges and multi-plane corners agree within 1 inch in 3D.</span></div>`;const totals=getEdgeTotals();$('#edgeSummary').innerHTML=`<div class="edge-summary-title"><h2>Roof-edge totals</h2><small>linear feet</small></div>${REPORT_EDGE_TYPES.map(type=>`<div class="${totals[type]?'':'edge-total-zero'}"><span style="color:${colors[type]}">${type}</span><b>${feet(totals[type])}</b></div>`).join('')}`}
+function updateEditor(){const f=face();$('#faceEditor').hidden=!f;if(!f)return;$('#faceName').value=f.name;$('#faceType').value=f.type;$('#pitch').value=f.pitch;$('#bearing').value=f.bearing;$('#eaveHeight').value=f.eave;$('#bearingValue').textContent=`${f.bearing}° ${['N','NE','E','SE','S','SW','W','NW'][Math.round(f.bearing/45)%8]}`}
+ for(const [id,key,min,max]of [['pitch','pitch',0,24],['bearing','bearing',0,359],['eaveHeight','eave',0,200]])$('#'+id).onchange=e=>{const f=face(),n=Number(e.target.value);if(!f)return;if(e.target.value===''||!Number.isFinite(n)||n<min||n>max){updateEditor();return toast(`Enter a value from ${min} to ${max}.`)}checkpoint();f[key]=n;solveConnected();render();updateEditor()};$('#bearing').oninput=e=>$('#bearingValue').textContent=e.target.value+'°';$$('[data-bearing]').forEach(b=>b.onclick=()=>{if(!face())return;checkpoint();face().bearing=+b.dataset.bearing;solveConnected();render();updateEditor()});$('#faceName').onchange=e=>{if(!face())return;checkpoint();face().name=e.target.value.trim()||'Roof plane';render();updateEditor()};$('#faceType').onchange=e=>{if(!face())return;checkpoint();face().type=e.target.value;render()};$('#deletePlane').onclick=()=>{if(!face())return;checkpoint();state.faces=state.faces.filter(f=>f.id!==selected);selected=state.faces.at(-1)?.id||null;render();updateEditor();toast('Plane deleted. Use Undo to restore it.')};
+const titles=['Find your roof','Label and measure roof lines','Set each plane’s pitch','Review your measurements','Lay out metal panels'],instructions=['Find the building, create an overall outline, then draw each roof plane inside it.','Click a roof line to highlight it, then assign its type or enter a field-measured length.','Select a plane, enter its pitch, and point the downslope arrow toward its eave.','Check plane dimensions and pitched-plane junction status before relying on the model.','Choose effective coverage and cut-length limits. The layout runs along each plane’s slope.'];
+function goStep(n){step=n;state.ui.step=n;$$('#steps button').forEach(b=>b.classList.toggle('active',+b.dataset.step===n));$('#stepLabel').textContent='STEP 0'+n;$('#heading').textContent=titles[n-1];$('#instruction').textContent=instructions[n-1];$('#next').textContent=n===5?'Save project':`Next: ${['','label edges','set pitch','review','panels & 3D'][n]} →`;$('#stepContent').innerHTML=n===2?'<div class="edge-options">'+Object.entries(colors).map(([name,color])=>`<button data-edge="${name}" style="--edge:${color}" class="${name===edgeType?'active':''}">${name}</button>`).join('')+'</div><p class="source">First click selects and highlights a line. Then choose its type. Draw adjoining planes for ridges, hips, and valleys.</p>':n===4?'<div class="review"><b>Geometry check</b><br>Only roof planes count toward 3D and takeoff. Shared pitched edges must report aligned before relying on the model.</div>':'';$$('[data-edge]').forEach(b=>b.onclick=()=>{edgeType=b.dataset.edge;$$('[data-edge]').forEach(x=>x.classList.toggle('active',x===b));const edge=currentEdge();if(edge)applyEdge(edge.key,edgeType)});if(tool!=='draw')setTool('pan');render()}
+function navigateStep(n){
+ goStep(n);
+ if(n===5&&view!=='three')void setView('three');
+}
+document.querySelectorAll('#steps button').forEach(b=>b.onclick=()=>navigateStep(+b.dataset.step));
+$('#next').onclick=()=>step===5?save():navigateStep(step+1);
+function fit(){const all=[...(state.outlines||[]),...state.faces,...(state.walls||[]).map(w=>({points:[w.a,w.b]}))];if(!all.length)return toast('Create an outline or draw a roof plane first.');map.fitBounds(L.latLngBounds(all.flatMap(f=>f.points.map(lat))),{padding:[75,80],maxZoom:22});if(view==='three')render3D(true)}$('#fit').onclick=fit;
+$('#lock').onclick=()=>{locked=!locked;for(const name of ['dragging','scrollWheelZoom','touchZoom','doubleClickZoom','boxZoom','keyboard'])if(map[name])map[name][locked?'disable':'enable']();map.doubleClickZoom.disable();$('#lock').textContent=locked?'Unlock map':'Lock map';$('#lock').classList.toggle('active',locked);toast(locked?'Map fixed in place. Roof points remain editable.':'Map navigation enabled.')};
+let searchSerial=0,suggestTimer=null,suggestions=[];
+function setSearchOpen(open){$('#address').setAttribute('aria-expanded',String(open));$('#searchResults').classList.toggle('open',open)}
+function renderSuggestions(items){suggestions=items;$('#searchResults').innerHTML='';for(const [index,item]of items.entries()){const b=document.createElement('button');b.type='button';b.role='option';b.dataset.index=index;b.textContent=item.text||item.address;b.onclick=()=>locateAddress(item);$('#searchResults').append(b)}setSearchOpen(items.length>0)}
+async function requestSuggestions(query){const serial=++searchSerial;if(query.length<3){renderSuggestions([]);return}try{const center=map.getCenter(),url=new URL('https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/suggest');url.search=new URLSearchParams({text:query,f:'json',maxSuggestions:'6',returnCollections:'false',location:`${center.lng},${center.lat}`});const r=await fetch(url,{signal:AbortSignal.timeout(10000)});if(!r.ok)throw Error();const data=await r.json();if(serial!==searchSerial)return;renderSuggestions(data.suggestions||[])}catch{if(serial===searchSerial)renderSuggestions([])}}
+async function locateAddress(item){const query=item.text||item.address||$('#address').value.trim(),serial=++searchSerial;$('#searchBtn').disabled=true;$('#searchResults').textContent='Locating address…';setSearchOpen(true);try{const url=new URL('https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates'),params={SingleLine:query,f:'json',maxLocations:item.magicKey?'1':'5',outFields:'Match_addr',forStorage:'false'};if(item.magicKey)params.magicKey=item.magicKey;url.search=new URLSearchParams(params);const r=await fetch(url,{signal:AbortSignal.timeout(15000)});if(!r.ok)throw Error('Address service unavailable');const data=await r.json();if(serial!==searchSerial)return;if(data.error)throw Error(data.error.message);const candidates=data.candidates||[];if(!candidates.length&&!item.candidate)throw Error('No matching address found');if(!item.magicKey&&!item.candidate&&candidates.length>1){renderSuggestions(candidates.map(c=>({text:c.address,candidate:c})));return}const c=item.candidate||candidates[0];setView('map');map.setView([c.location.y,c.location.x],20);state.address=c.address;$('#mapStatus').textContent=c.address;$('#address').value=c.address;renderSuggestions([]);setTool('auto');toast('Address located. Click the building to auto-outline it, or choose Draw plane.')}catch(err){$('#searchResults').textContent=`${err.message}. You can still pan and zoom to the roof.`;setSearchOpen(true)}finally{if(serial===searchSerial)$('#searchBtn').disabled=false}}
+$('#address').addEventListener('input',e=>{clearTimeout(suggestTimer);const query=e.target.value.trim();suggestTimer=setTimeout(()=>requestSuggestions(query),250)});$('#address').addEventListener('keydown',e=>{const options=$$('#searchResults button');if(e.key==='ArrowDown'&&options.length){e.preventDefault();options[0].focus()}if(e.key==='Escape')renderSuggestions([])});$('#searchResults').addEventListener('keydown',e=>{const options=$$('#searchResults button'),at=options.indexOf(document.activeElement);if(e.key==='ArrowDown'){e.preventDefault();options[(at+1)%options.length]?.focus()}if(e.key==='ArrowUp'){e.preventDefault();(at<=0?$('#address'):options[at-1]).focus()}if(e.key==='Escape'){renderSuggestions([]);$('#address').focus()}});$('#searchForm').onsubmit=e=>{e.preventDefault();const query=$('#address').value.trim();if(query)locateAddress(suggestions.find(s=>s.text===query)||{text:query})};document.addEventListener('click',e=>{if(!$('#searchForm').contains(e.target)&&!$('#searchResults').contains(e.target))setSearchOpen(false)});
+function settingsToUI(){const s=state.settings;$('#groupPanelLengths').checked=s.groupPanelLengths===true;const standard=[12,16,18,20,32,34,36].includes(s.width);$('#panelWidth').value=standard?String(s.width):'custom';$('#customWidth').value=s.width;$('#customWidthRow').hidden=standard;$('#maxLength').value=s.maxLength;$('#allowance').value=s.allowance;if(![...$('#panelColor').options].some(option=>option.value===s.color))$('#panelColor').add(new Option(state.materials.colorName||'Custom color',s.color));$('#panelColor').value=s.color;$('#autoSnap').checked=s.autoSnap!==false;$('#gridSnap').checked=s.gridSnap!==false;$('#snapTolerance').value=s.snapTolerance??6;$('#snapToleranceValue').textContent=`${num(s.snapTolerance??6,1)} in`;$('#panelType').value=state.materials.panelType;$('#gauge').value=[...$('#gauge').options].some(option=>option.value===state.materials.gauge)?state.materials.gauge:'Custom';$('#showPanels').checked=Boolean(state.ui.showPanels);roofCatalog?.sync();wallCatalog?.sync();wallPanelControls?.sync()}
+$('#groupPanelLengths').onchange = event => {
+ checkpoint();
+ state.settings.groupPanelLengths = event.target.checked;
+ render();
+};
+function changeSettings(){const width=$('#panelWidth').value==='custom'?+$('#customWidth').value:+$('#panelWidth').value,max=+$('#maxLength').value,allow=+$('#allowance').value;if(!(width>=1&&width<=120&&max>=1&&max<=200&&allow>=0&&allow<=48))return toast('Check the width, length, and allowance limits.');checkpoint();state.settings={...state.settings,width,maxLength:max,allowance:allow,color:$('#panelColor').value};const currentProfile=getPanelProfile(state.settings.profileId,'roof');
+ if(currentProfile&&!currentProfile.widths.includes(width)){delete state.settings.profileId;delete state.settings.panStyle;}
+ else if(currentProfile&&state.settings.panStyle){
+  const pan=selectedPan(currentProfile,width,state.settings.panStyle);
+  if(pan)state.settings.panStyle=pan.id;
+ }
+ state.materials.colorName=$('#panelColor').selectedOptions[0]?.textContent||'Custom color';roofCatalog?.sync();$('#customWidthRow').hidden=$('#panelWidth').value!=='custom';render()}
+for(const id of ['panelWidth','customWidth','maxLength','allowance','panelColor'])$('#'+id).onchange=changeSettings;for(const [id,key]of [['panelType','panelType'],['gauge','gauge']])$('#'+id).onchange=e=>{checkpoint();state.materials[key]=String(e.target.value).slice(0,key==='panelType'?80:30);if(key==='panelType'){delete state.settings.profileId;delete state.settings.panStyle;roofCatalog?.sync()}render()};$('#showPanels').onchange=e=>{checkpoint();state.ui.showPanels=e.target.checked;render()};
+$('#snapTolerance').oninput=e=>$('#snapToleranceValue').textContent=`${num(+e.target.value,1)} in`;$('#snapTolerance').onchange=e=>{checkpoint();state.settings.snapTolerance=+e.target.value;if(state.settings.autoSnap!==false)solveConnected(true);render()};$('#autoSnap').onchange=e=>{checkpoint();state.settings.autoSnap=e.target.checked;clearSnapPreview();if(e.target.checked)solveConnected(true);render()};$('#gridSnap').onchange=e=>{checkpoint();state.settings.gridSnap=e.target.checked;clearSnapPreview();render();toast(e.target.checked?'Recommended 1 ft grid snapping enabled.':'Grid recommendations off; roof geometry snapping stays available.')};$('#snapJunctions').onclick=()=>{checkpoint();const result=solvePlaneJunctions(state.faces,state.origin,{fixedFaceId:selected,snapTolerance:(state.settings.snapTolerance??6)/12*FT});if(!result.changed)history.pop();render();updateEditor();toast([...result.report,...result.vertexReport].some(j=>j.status!=='aligned')?'Some named plane junctions exceed the safe correction limit and remain highlighted.':result.changed?'Connected roof junctions reconciled from their pitch equations.':'Shared junctions are already aligned.')};
+async function setView(mode){view=mode;state.ui.view=mode;$('.workspace').classList.toggle('three-mode',mode==='three');$('#map').hidden=mode==='three';$('#three').hidden=mode!=='three';$('#threeTip').hidden=mode!=='three';$('#lock').hidden=mode==='three';for(const [id,m]of [['mapView','map'],['planView','plan'],['threeView','three']])$('#'+id).classList.toggle('active',mode===m);if(mode==='three'){await render3D(true)}else{setInspectMode(false);map.invalidateSize();if(mode==='plan'){if(map.hasLayer(tiles))map.removeLayer(tiles);$('#map').classList.add('plan-mode')}else{if(!map.hasLayer(tiles))tiles.addTo(map);$('#map').classList.remove('plan-mode')}render()}}
+$('#mapView').onclick=()=>setView('map');$('#planView').onclick=()=>setView('plan');$('#threeView').onclick=()=>setView('three');
+wallPanelControls = setupWallPanelControls({getState:()=>state,checkpoint,render,showDialog,
+ viewPanels:()=>{goStep(5);void setView('three')}
+});
+setupWallEditor({getState:()=>state,checkpoint,render,showDialog});
+setupWallClickTools({getState:()=>state,checkpoint,render,showDialog,map,setView,
+ inspectPanel:(wallId,offset)=>view==='three' && step===5 && state.wallPanels?.show===true && Boolean(wallPanelControls) && wallPanelControls.openPanel(wallId,offset)!==false,
+ setTool:()=>{goStep(1);setTool('pan')}});
+setupRoofTrimControls({getState:()=>state,currentEdge,checkpoint,render,showDialog,viewTrim:()=>{if(view!=='three')void setView('three')},applyOverhang:(edge,inches)=>{const faces=addRoofOverhang(state.faces,state.origin,edge.face.id,edge.index,inches);checkpoint();state.faces=faces;const face=faces.find(f=>f.id===edge.face.id);selectedEdge=edgeKey(face.points[edge.index],face.points[(edge.index+1)%face.points.length]);render();updateEditor()}});
+const setInspectMode=on=>{
+ $('#focus3d').setAttribute('aria-pressed',String(on));
+ $('#threeHint').textContent=on?'Click a roof or wall to inspect its panels':'Drag to orbit · scroll to zoom';
+ viewer?.setFocus?.(on);
+};
+$('#focus3d').onclick=()=>setInspectMode($('#focus3d').getAttribute('aria-pressed')!=='true');
+$('#zoomIn3d').onclick=()=>viewer?.zoomBy?.(.65);
+$('#zoomOut3d').onclick=()=>viewer?.zoomBy?.(1/.65);
+$('#reset3d').onclick=()=>{setInspectMode(false);viewer?.resetCamera?.();};
+$('#three').addEventListener('panel-focus-used',()=>setInspectMode(false));
+
+roofCatalog=setupPanelCatalog({host:$('#panelSettings'),surface:'roof',getCurrent:()=>({...state.settings,colorName:state.materials.colorName}),
+ onApply({profile,width,color,colorName,panStyle}){
+  checkpoint();
+  Object.assign(state.settings,{profileId:profile?.id||'',panStyle,width,color});
+  if(profile?.maxLength)state.settings.maxLength=profile.maxLength;
+  if(profile)state.materials.panelType=profile.name;
+  state.materials.colorName=colorName;
+  state.ui.showPanels=true;
+  settingsToUI();goStep(5);if(view!=='three')void setView('three');
+ }
+});
+wallCatalog=setupPanelCatalog({host:$('#wallPanelSetup').closest('section'),surface:'wall',getCurrent:()=>({width:36,...state.wallPanels}),
+ onApply({profile,width,color,colorName,panStyle}){
+  checkpoint();
+  const next={width:36,maxLength:20,allowance:0,...state.wallPanels,profileId:profile?.id||'',panStyle,width,color,colorName,show:true};
+  if(profile?.maxLength)next.maxLength=profile.maxLength;
+  state.wallPanels=next;
+  settingsToUI();goStep(5);if(view!=='three')void setView('three');
+ }
+});
+
+let viewerPromise,usingCompatibility=false;
+function compatibilityViewer(){
+ usingCompatibility=true;
+ return import('./roof3d-fallback.mjs').then(m=>m.createViewer($('#three')));
+}
+async function render3D(reset=false){
+ const host=$('#three');
+ if(!viewerPromise){
+  viewerPromise=import('./roof3d.mjs').then(m=>m.createViewer(host)).catch(()=>compatibilityViewer());
+ }
+ try{
+  viewer=await viewerPromise;
+  if(view!=='three')return;
+  try{
+   viewer.update(state,summary,$('#showPanels').checked,reset);
+  }catch(error){
+   if(usingCompatibility)throw error;
+   console.warn('Switching to the compatibility 3D viewer.',error);
+   viewer.dispose?.();
+   viewerPromise=compatibilityViewer();
+   viewer=await viewerPromise;
+   if(view!=='three')return;
+   viewer.update(state,summary,$('#showPanels').checked,true);
+  }
+  $('#threeFirstFrame')?.remove();
+  $('#threeActions').hidden=!viewer.setFocus;
+  if(pendingCamera){viewer.setViewState(pendingCamera);pendingCamera=null;}
+  if(!state.faces.length&&!state.walls?.length)toast('Add a wall or roof plane to build a 3D model.');
+ }catch(error){
+  console.error(error);
+  $('#threeActions').hidden=true;
+  $('#threeHint').textContent='The interactive 3D view could not start. Download the planner and open it in Chrome.';
+ }
+}
+function download(name,content,type){const url=URL.createObjectURL(new Blob([content],{type})),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+async function save(){state.address=$('#address').value.trim();const center=map.getCenter(),payload=snapshotProject(state,{step,view,showPanels:$('#showPanels').checked,selectedFaceId:selected,selectedOutlineId:selectedOutline,selectedEdge,map:{center:{lat:center.lat,lng:center.lng},zoom:map.getZoom()},camera:viewer?.getViewState?.()||state.ui.camera});state=payload;const base=(state.quote.projectName||state.address||'taylor-roof-project').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').slice(0,70)||'taylor-roof-project';download(`${base}.json`,JSON.stringify(payload,null,2),'application/json');$('#saveStatus').textContent='Project file downloaded';toast('Complete project downloaded. Open this file later to resume the same geometry, quote, panel, and view settings.')}
+$('#save').onclick=save;
+$('#open').onclick=()=>$('#fileInput').click();
+$('#fileInput').onchange=event=>{
+ const file=event.target.files[0];
+ event.target.value='';
+ void openPlannerFile(file);
+};
+
+let fileRequest=0;
+async function openPlannerFile(file) {
+ if (!file) return;
+ const request=++fileRequest;
+ const wanted=planImporter.beginSelection();
+ try {
+  const header=new Uint8Array(await file.slice(0,1024).arrayBuffer());
+  if (request!==fileRequest || !wanted()) return;
+  const kind=plannerFileKind(header,file.size,file.name,file.type);
+  if (kind!=='project') {
+   await planImporter.openFile(file,kind);
+   return;
+  }
+  const raw=JSON.parse((await file.text()).replace(/^\uFEFF/,''));
+  if (request!==fileRequest || !wanted()) return;
+  await restorePlannerProject(raw,request,wanted);
+ } catch (err) {
+  if (request!==fileRequest) return;
+  const message='Could not open file. '+err.message;
+  if (!planImporter.reportFileError(message)) toast(message);
+ }
+}
+
+async function openReviewedExample(project) {
+ const request=++fileRequest;
+ await restorePlannerProject(project,request,()=>true);
+}
+
+async function restorePlannerProject(raw,request,wanted) {
+ const project=parseProject(raw);
+ if ((state.faces.length || state.outlines.length || state.walls.length || draft.length) &&
+    !(await confirmReplacement('Open this saved project? Save any current edits you want to keep first.','Open project'))) return;
+ if(request!==fileRequest||!wanted())return;
+ planImporter.close();
+ const ui=project.ui;
+ state=project;
+ selected=ui.selectedFaceId||state.faces[0]?.id||null;
+ selectedOutline=ui.selectedOutlineId||(!selected?state.outlines[0]?.id||null:null);
+ selectedEdge=ui.selectedEdge;
+ step=ui.step;
+ view='map';
+ pendingCamera=ui.camera;
+ draft=[];draftTargets=[];history=[];
+ $('#address').value=state.address;
+ $('#mapStatus').textContent=state.address||'Loaded roof project';
+ settingsToUI();
+ setTool('pan');
+ goStep(ui.step);
+ if (ui.map) map.setView([ui.map.center.lat,ui.map.center.lng],ui.map.zoom);
+ else if (state.faces.length||state.outlines.length) fit();
+ await setView(ui.view);
+ if (request!==fileRequest) return;
+ render();updateEditor();
+ $('#saveStatus').textContent='Project opened';
+ toast(raw.version<8?'Project restored with its original panel lengths. Turn on length matching under Panel cut lengths when needed.':'Complete project restored. Continue editing where you left off.');
+}
+
+$('#openCutSheets').onclick=()=>$('#wallPanelSheets').click();
+
+const fileWorkspace=$('.workspace');
+const draggingFiles=event=>Array.from(event.dataTransfer?.types||[]).includes('Files');
+fileWorkspace.addEventListener('dragover',event=>{
+ if (!draggingFiles(event)) return;
+ event.preventDefault();
+ event.dataTransfer.dropEffect='copy';
+ fileWorkspace.classList.add('file-hover');
+},true);
+fileWorkspace.addEventListener('dragleave',event=>{
+ if (!fileWorkspace.contains(event.relatedTarget)) fileWorkspace.classList.remove('file-hover');
+},true);
+fileWorkspace.addEventListener('drop',event=>{
+ if (!draggingFiles(event)) return;
+ event.preventDefault();
+ event.stopPropagation();
+ fileWorkspace.classList.remove('file-hover');
+ if (event.dataTransfer.files.length!==1) {toast('Drop one plan or saved project at a time.');return;}
+ void openPlannerFile(event.dataTransfer.files[0]);
+},true);
+function cutGroups(){const groups=new Map();for(const r of summary.rows)for(const p of r.panels){const key=`${r.face.id}:${p.length}`;if(!groups.has(key))groups.set(key,{name:r.face.name,length:p.length,qty:0,oversize:p.oversize});groups.get(key).qty++}return [...groups.values()]}
+const quoteFields={customerName:['customer','name'],customerCompany:['customer','company'],customerPhone:['customer','phone'],customerEmail:['customer','email'],projectName:['quote','projectName'],quoteNumber:['quote','number'],quoteDate:['quote','date'],validUntil:['quote','validUntil']};
+function quoteToUI(){for(const [element,[section,key]]of Object.entries(quoteFields))$('#'+element).value=state[section][key]||'';$('#panelPrice').value=state.quote.materialPricePerSqFt;$('#taxRate').value=state.quote.taxRate;for(const type of REPORT_EDGE_TYPES)$('#price'+type).value=state.quote.trimPrices[type]||0;$('#accessories').value=state.quote.accessories.map(item=>`${item.description} | ${item.quantity} | ${item.unitPrice}`).join('\n');$('#quoteNotes').value=state.quote.notes}
+$('#buildHouse').onclick=()=>{showDialog('Build a house by dimensions','<p class="muted">Creates an editable rectangular gable house centered on the current map view. Dimensions are plan measurements in feet; wall height becomes the 3D eave height.</p><div class="form-grid"><label>House width (ft)<input id="houseWidth" type="number" min="4" max="500" step="0.25" value="40"></label><label>House depth (ft)<input id="houseDepth" type="number" min="4" max="500" step="0.25" value="30"></label><label>Wall / eave height (ft)<input id="wallHeight" type="number" min="0" max="200" step="0.25" value="10"></label><label>Roof pitch / 12<input id="housePitch" type="number" min="0" max="24" step="0.25" value="6"></label></div><p class="source">Generates two connected roof planes, an editable ridge and labeled eaves/rakes. It is a template—not a structural design or field-verified measurement.</p><button id="generateHouse" class="primary full">Generate editable house</button>');$('#generateHouse').onclick=generateHouse};
+$('#addPart').onclick=()=>{const parts=state.building?.parts||[],defaultX=parts.length?Math.round((parts.length*28)+2):0;showDialog('Add a building section','<p class="muted">Add an editable rectangular gable section such as a bedroom, living room, garage, dining room, den, family room, or office. X/Y position is in plan feet from the original house center; use it to place each section, then refine its roof points manually.</p><div class="form-grid"><label>Section type<select id="partType"><option>Bedroom</option><option>Living room</option><option>Garage</option><option>Dining room</option><option>Den</option><option>Family room</option><option>Office</option><option>Custom addition</option></select></label><label>Section width (ft)<input id="partWidth" type="number" min="4" max="500" step="0.25" value="20"></label><label>Section depth (ft)<input id="partDepth" type="number" min="4" max="500" step="0.25" value="16"></label><label>Wall / eave height (ft)<input id="partWallHeight" type="number" min="0" max="200" step="0.25" value="10"></label><label>Roof pitch / 12<input id="partPitch" type="number" min="0" max="24" step="0.25" value="6"></label><label>X position (ft)<input id="partX" type="number" min="-2000" max="2000" step="0.25" value="'+defaultX+'"></label><label>Y position (ft)<input id="partY" type="number" min="-2000" max="2000" step="0.25" value="0"></label></div><p class="source">This creates geometry, not architectural floor plans or structural design. Avoid overlapping sections unless you intend to manually solve their roof intersections.</p><button id="generatePart" class="primary full">Add editable building section</button>');$('#generatePart').onclick=addBuildingPart};
+
+function restoreBeforePlanImport(project) {
+ state=project;
+ selected=state.ui.selectedFaceId;
+ selectedEdge=state.ui.selectedEdge;
+ selectedOutline=state.ui.selectedOutlineId;
+ pendingCamera=state.ui.camera;
+ const previousView=state.ui.view;
+ $('#address').value=state.address;
+ settingsToUI();
+ goStep(state.ui.step);
+ const oldMap=state.ui.map;
+ if(oldMap)map.setView([oldMap.center.lat,oldMap.center.lng],oldMap.zoom);
+ void setView(previousView);
+ updateEditor();
+ toast('Plan import undone.');
+}
+function addReviewedDrawing(review) {
+ const baseline = review.newProject ? createProjectState() : state;
+ const candidate = buildPlanProject(baseline, review, map.getCenter());
+ const part = candidate.building.parts.at(-1);
+ if (!candidate.quote.projectName) candidate.quote.projectName = part.name;
+ candidate.ui.showPanels = true;
+ candidate.wallPanels.show = true;
+ const centerBeforeImport = map.getCenter();
+ const undoProject = snapshotProject(state,{step,view,selectedFaceId:selected,selectedOutlineId:selectedOutline,
+  selectedEdge,showPanels:$('#showPanels').checked,map:{center:{lat:centerBeforeImport.lat,lng:centerBeforeImport.lng},zoom:map.getZoom()},
+  camera:viewer?.getViewState?.() || null});
+ checkpoint();
+ history[history.length-1] = JSON.stringify({planImportUndo:true,project:undoProject});
+ state = candidate;
+ $('#address').value=state.address;
+ selected = part.roofFaceIds[0];
+ selectedOutline = null;
+ selectedEdge = null;
+ pendingCamera = null;
+ settingsToUI();
+ goStep(5);
+ fit();
+ render();
+ updateEditor();
+ void setView('three');
+ toast(part.name+' added with '+review.openings.length+' openings. Undo removes this import.');
+}
+function canImportDrawing() {
+ if (draft.length || document.body.dataset.wallTool) {
+  toast('Finish or cancel the current drawing tool before importing a plan.');
+  return false;
+ }
+ return true;
+}
+const planImporter = setupPlanImport({onBuild:addReviewedDrawing,canStart:canImportDrawing,toast,routeFile:openPlannerFile,findReviewed:lookupReviewedPlan,onOpenExample:openReviewedExample});
+const drawingReferences = document.createElement('button');
+drawingReferences.textContent = 'Drawing references';
+drawingReferences.className = 'full';
+drawingReferences.id = 'planSourceReferences';
+$('#edgeSummary').after(drawingReferences);
+drawingReferences.onclick = () => {
+ const parts = (state.building?.parts || []).filter(part => part.planSource);
+ if (!parts.length) return toast('Import a plan to see its sheet references.');
+ const html = parts.map(part => {
+  const ref = part.planSource;
+  const openingRef = ref.openings.map(row => {
+   const opening = state.wallOpenings.find(o => o.id === row.id);
+   if (!opening) return '';
+   return '<li>'+esc(opening.kind)+' · '+esc(row.detail)+'</li>';
+  }).join('');
+  return '<h3>'+esc(part.name)+'</h3><p>'+esc(ref.file)+'</p><ul>'+ref.notes.map(note=>'<li>'+esc(note)+'</li>').join('')+'</ul>'+
+   (openingRef ? '<details><summary>Opening references at import</summary><ul>'+openingRef+'</ul></details>' : '');
+ }).join('');
+ showDialog('Drawing references',html);
+};
+
+$('#quoteSetup').onclick=()=>{quoteToUI();$('#quoteDialog').showModal()};$('#closeQuote').onclick=()=>$('#quoteDialog').close();
+$('#saveQuote').onclick=()=>{try{const numberValue=(id,min=0,max=1000000)=>{const value=Number($('#'+id).value||0);if(!Number.isFinite(value)||value<min||value>max)throw Error(`Check ${$('label[for="'+id+'"]')?.textContent||id}`);return value},accessories=[];for(const [index,line]of $('#accessories').value.split(/\r?\n/).entries()){if(!line.trim())continue;const [description,quantity,unitPrice]=line.split('|').map(part=>part.trim());if(!description||!Number.isFinite(Number(quantity))||Number(quantity)<=0||!Number.isFinite(Number(unitPrice))||Number(unitPrice)<0)throw Error(`Additional item line ${index+1} must be Description | Quantity | Unit price`);accessories.push({description:description.slice(0,120),quantity:Number(quantity),unitPrice:Number(unitPrice)})}checkpoint();for(const [element,[section,key]]of Object.entries(quoteFields))state[section][key]=$('#'+element).value.trim();state.quote.materialPricePerSqFt=numberValue('panelPrice');state.quote.taxRate=numberValue('taxRate',0,100);for(const type of REPORT_EDGE_TYPES)state.quote.trimPrices[type]=numberValue('price'+type);state.quote.accessories=accessories;state.quote.notes=$('#quoteNotes').value.slice(0,5000);$('#quoteDialog').close();toast('Customer and quote details saved with the project.')}catch(err){toast(err.message)}};
+$('#createReport').onclick=async()=>{if(!state.faces.length&&!getWalls(state).length)return toast('Add a wall or roof before creating a report.');const reportType=$('#reportType').value,option=REPORT_TYPES[reportType]||REPORT_TYPES.full,reportWindow=window.open('','_blank');if(!reportWindow)return toast('The report window was blocked. Allow pop-ups for this site and try again.');reportWindow.document.write('<!doctype html><title>Preparing roof report…</title><p style="font:16px Arial;padding:30px">Preparing measurements and roof views…</p>');try{let images=[];if(option.views){if(!viewerPromise)viewerPromise=import('./roof3d.mjs').then(module=>module.createViewer($('#three')));viewer=await viewerPromise;viewer.update(state,summary,option.panels,false);images=viewer.captureViews();viewer.update(state,summary,$('#showPanels').checked,false)}const html=buildReportHtml({state,summary,edgeTotals:getEdgeTotals(),cutGroups:cutGroups(),images,reportType});reportWindow.document.open();reportWindow.document.write(html);reportWindow.document.close();reportWindow.focus();reportWindow.addEventListener('load',()=>setTimeout(()=>reportWindow.print(),250),{once:true});toast(`${option.label} prepared. Choose Save as PDF in the print window.`)}catch(err){reportWindow.close();console.error(err);toast('Could not create the report: '+err.message)}};
+function confirmReplacement(message,action){
+ if($('#replacementPrompt'))return Promise.resolve(false);
+ const prompt=document.createElement('dialog');
+ prompt.id='replacementPrompt';prompt.setAttribute('aria-labelledby','replacementTitle');
+ const title=document.createElement('h2');title.id='replacementTitle';title.textContent=action;
+ const description=document.createElement('p');description.textContent=message;
+ const row=document.createElement('div');row.className='two';
+ const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Cancel';cancel.autofocus=true;
+ const accept=document.createElement('button');accept.type='button';accept.className='primary';accept.textContent=action;
+ row.append(cancel,accept);prompt.append(title,description,row);document.body.append(prompt);
+ return new Promise(resolve=>{
+  prompt.addEventListener('close',()=>{const allowed=prompt.returnValue==='continue';prompt.remove();resolve(allowed);},{once:true});
+  cancel.onclick=()=>prompt.close('cancel');
+  accept.onclick=()=>prompt.close('continue');
+  prompt.showModal();
+ });
+}
+function showDialog(title,html){$('#dialogTitle').textContent=title;$('#dialogContent').innerHTML=html;$('#dialog').showModal()}$('#closeDialog').onclick=()=>$('#dialog').close();$('#cutList').onclick=()=>showDialog('Panel cut list',summary.count?`<p>${summary.count} panels · ${state.settings.width}″ effective coverage. Order lengths include ${state.settings.allowance}″ total end allowance. ${state.settings.groupPanelLengths?'Within each roof plane, compatible blanks share the longer whole-inch length.':'Each blank rounds up to a whole inch.'}</p><table><thead><tr><th>Plane</th><th>Length</th><th>Qty</th><th>Check</th></tr></thead><tbody>${cutGroups().map(p=>`<tr><td>${esc(p.name)}</td><td>${feet(p.length)}</td><td>${p.qty}</td><td>${p.oversize?'Exceeds max length':'Within length limit'}</td></tr>`).join('')}</tbody></table><p>Conservative rectangular blanks. Field verification and fabricator review required; no offcut nesting or engineered laps.</p>`:'<p>Draw a roof plane first. Its cut lengths will appear here.</p>');
+$('#exportCSV').onclick=()=>{if(!summary.count)return toast('Draw a plane before exporting cuts.');const csvCell=s=>'"'+String(s).replace(/^[=+@-]/,"'").replace(/"/g,'""')+'"';const csv=['Plane,Coverage width (in),Length (ft),Quantity,Status',...cutGroups().map(p=>[csvCell(p.name),state.settings.width,p.length.toFixed(4),p.qty,p.oversize?'EXCEEDS MAX LENGTH':'FIELD VERIFY'].join(','))].join('\r\n');download('taylor-panel-cuts.csv',csv,'text/csv');toast('Cut list downloaded.')};
+$('#exportPlan').onclick=()=>{if(!state.faces.length)return toast('Draw a roof plane first.');const pts=state.faces.flatMap(f=>f.points.map(p=>project(p,state.origin))),minX=Math.min(...pts.map(p=>p.x)),maxX=Math.max(...pts.map(p=>p.x)),minY=Math.min(...pts.map(p=>p.y)),maxY=Math.max(...pts.map(p=>p.y)),scale=Math.min(800/(maxX-minX),570/(maxY-minY)),xy=p=>({x:100+(p.x-minX)*scale,y:100+(maxY-p.y)*scale}),pair=p=>{const q=xy(p);return `${q.x},${q.y}`};let content='';for(const r of summary.rows){content+=`<polygon points="${r.points.map(pair).join(' ')}" fill="${state.settings.color}" fill-opacity=".4" stroke="#156587" stroke-width="2"/>`;if($('#showPanels').checked)for(const p of r.panels)content+=`<polygon points="${p.polygon.map(pair).join(' ')}" fill="none" stroke="#336f87" stroke-width=".7"/>`;const c=xy({x:r.points.reduce((s,p)=>s+p.x,0)/r.points.length,y:r.points.reduce((s,p)=>s+p.y,0)/r.points.length});content+=`<text x="${c.x}" y="${c.y}" text-anchor="middle" font-size="14">${esc(r.face.name)} · ${r.face.pitch}/12 · ${num(r.surface/FT**2)} ft²</text>`}for(const e of edgeRecords()){const a=xy(project(e.a,state.origin)),b=xy(project(e.b,state.origin));content+=`<text x="${(a.x+b.x)/2}" y="${(a.y+b.y)/2-5}" text-anchor="middle" font-size="12" paint-order="stroke" stroke="white" stroke-width="4" fill="#0b263b">${e.type} ${feet(e.length)}</text>`}const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="800" viewBox="0 0 1000 800"><rect width="1000" height="800" fill="#f1f7fa"/><g font-family="Arial" fill="#09273a"><text x="40" y="40" font-size="23">Taylor Metal — Measured roof plan</text><text x="40" y="65" font-size="14">${esc($('#address').value)} · North ↑</text>${content}<text x="40" y="730" font-size="16">Plan: ${num(summary.flat,1)} ft² · Sloped: ${num(summary.surface,1)} ft² · Panels: ${summary.count}</text><text x="40" y="765" font-size="12">Aerial estimate — verify on site. Geography is preserved in the accompanying saved project JSON.</text></g></svg>`;download('taylor-measured-roof.svg',svg,'image/svg+xml');toast('Measured plan downloaded with dimensions.')};
+$('#help').onclick=()=>showDialog('Outline a roof, then build its planes','<ol><li><b>Find your roof:</b> start typing an address and choose a suggested match. The imagery is Esri aerial imagery, not Google.</li><li><b>Create the boundary:</b> choose Auto-outline and click the building. This creates an overall snap guide only. It is never counted as a roof plane.</li><li><b>Draw roof planes:</b> choose Draw plane and click each surface inside the outline. Corners snap to nearby outline segments, outline corners, and existing plane geometry.</li><li><b>Refine:</b> select an outline or plane and drag its corners. Click a plane midpoint to add a corner. Right-click a plane corner to remove it. Undo restores edits.</li><li><b>Label and measure:</b> click a roof line first; it highlights immediately. Then choose ridge, hip, valley, rake, eave, or flashing. Enter field-measured feet and inches when available.</li><li><b>Set pitch:</b> enter rise per 12 inches and set downslope direction for every plane. Sloped area is calculated independently.</li><li><b>Validate junctions:</b> choose a small junction tolerance for drawing inaccuracies. Nearby plane corners and edge terminations become shared geometry, then shared edges and multi-plane corners are reconciled from the entered pitch equations. Green seams align; red or amber seams identify the named planes and edges that remain mathematically unresolved.</li><li><b>Plan panels:</b> select profile, gauge, effective coverage, maximum length, color, and total end allowance. View the calculated panel layout, 3D roof, and cut list.</li><li><b>Quote and report:</b> add customer, pricing, accessories, taxes, and notes under Project & quote. Choose a report type, then use Create PDF / print report and select Save as PDF.</li><li><b>Keep your work:</b> Save project downloads the complete editable project. Open project restores geometry, quote data, panel settings, workflow position, map view, and 3D view.</li></ol><p>Automatic reconciliation never changes entered pitch. Constraints that require an unsafe move or cannot share one valid XYZ junction remain warnings. Automatic outlines come from public mapped footprints, not roof-image detection. All aerial measurements and material outputs require field verification and fabricator review before ordering.</p>');
+$('#blankPreview')?.addEventListener('click',async()=>{
+ if((state.faces.length||state.walls.length||state.outlines.length||draft.length)&&
+    !(await confirmReplacement('Start a blank project? Save any edits you want to keep first.','Start blank project')))return;
+ fileRequest++;planImporter.close();
+ state=createProjectState();selected=null;selectedOutline=null;selectedEdge=null;pendingCamera=null;
+ draft=[];draftTargets=[];history=[];view='map';$('#address').value='';
+ settingsToUI();goStep(1);updateEditor();
+ $('#saveStatus').textContent='Unsaved project';
+ $('#mapStatus').textContent='Find your property';
+ void setView('map');
+});
+if(document.body.dataset.startScene==='workshop'){
+ state=previewWorkshop();
+ selected=state.ui.selectedFaceId;
+ settingsToUI();
+ goStep(5);fit();updateEditor();
+ $('#saveStatus').textContent='Sample workshop';
+ void setView('three');
+}else{
+ render();updateEditor();
+}

@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import {plannerFileKind} from './dist/file-import.mjs';
+const bytes=s=>Uint8Array.from(s,c=>c.charCodeAt(0));
+const kind=(s,name='',size=s.length)=>plannerFileKind(bytes(s),size,name,'');
+assert.equal(kind('%PDF-1.7','drawing.bin'),'pdf');
+assert.equal(kind('  old header\n%PDF-1.5','plan.pdf'),'pdf');
+assert.equal(kind('\xEF\xBB\xBF {"label":"%PDF-1.4"}','drawing.pdf'),'project');
+assert.equal(kind('\x89PNG\r\n\x1a\n','drawing.pdf'),'png');
+assert.equal(kind('\xff\xd8\xff','no-extension'),'jpeg');
+assert.equal(kind('RIFF1234WEBP','x'),'webp');
+assert.throws(()=>kind('RIFF1234WAVE','elevation.webp'),/Choose/);
+assert.throws(()=>kind('<html>error</html>','plan.pdf'),/Choose/);
+assert.throws(()=>kind('{}','p.json',5000001),/5 MB/);
+assert.throws(()=>kind('%PDF-1.7','x.pdf',65*1024*1024),/64 MB/);
+assert.throws(()=>kind('','missing'),/nonempty/);

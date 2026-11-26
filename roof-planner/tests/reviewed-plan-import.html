@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Reviewed PDF import check</title>
+<label>Original previously reviewed PDF <input id="pick" type="file" accept="application/pdf" disabled></label>
+<p id="status" role="status">Opening the planner…</p>
+<iframe title="Planner under test" style="width:95vw;height:660px"></iframe>
+<script type="module">
+import {lookupReviewedPlan} from '../dist/reviewed-plans.mjs';
+const pick=document.querySelector('#pick'), frame=document.querySelector('iframe'), status=document.querySelector('#status');
+const assert=(ok,message)=>{if(!ok)throw Error(message)};
+async function waitFor(test){
+ const end=performance.now()+20000;
+ while(!test()){if(performance.now()>end)throw Error('Timed out waiting for the planner');await new Promise(resolve=>setTimeout(resolve,30));}
+}
+frame.onload=()=>{pick.disabled=false;status.textContent='Choose the original reviewed PDF to check the upload.';};
+frame.src='../dist/index.html';
+pick.onchange=async()=>{
+ try{
+  const file=pick.files[0];if(!file)return;
+  const match=await lookupReviewedPlan(file);
+  assert(match,'Select the original reviewed drawing.');
+  const doc=frame.contentDocument, win=frame.contentWindow, input=doc.querySelector('#fileInput');
+  const transfer=new win.DataTransfer();transfer.items.add(new win.File([file],'Renamed drawing.pdf',{type:'application/pdf'}));
+  input.files=transfer.files;input.dispatchEvent(new win.Event('change',{bubbles:true}));
+  const review=doc.querySelector('.pi-body > section:nth-child(2)'), rows=()=>review.querySelectorAll('.pi-rows fieldset');
+  await waitFor(()=>!review.hidden && rows().length===match.review.openings.length);
+  const fields=Array.from(review.querySelector('.pi-fields').querySelectorAll('label'),l=>l.querySelector('input,select').value);
+  const expected=['name','width','depth','wallHeight','roof','pitch','ridge'].map(k=>String(match.review[k]));
+  assert(expected.every((v,i)=>fields[i]===v),'Measurements disagree with the reviewed drawing.');
+  assert(!review.querySelector('.pi-check input').checked,'Review was accepted automatically.');
+  review.querySelector('.pi-check input').checked=true;review.querySelector('button.primary').click();
+  await waitFor(()=>!doc.querySelector('.pi-dialog').open && !doc.querySelector('#three').hidden);
+  doc.querySelector('#openCutSheets').click();
+  await waitFor(()=>doc.querySelector('#wallCutSheetView .ws-wall option'));
+  doc.querySelector('#closeDialog').click();
+  const data=new Uint8Array(await file.arrayBuffer());data[data.length-1]^=1;
+  assert(await lookupReviewedPlan(new File([data],file.name))===null,'A revised PDF reused a stale review.');
+  status.textContent='PASS · Renamed drawing, measurements, openings, 3D, cut sheets, and changed-file handling.';
+ }catch(error){status.textContent='FAIL · '+error.message;throw error;}
+};
+</script></html>

@@ -1,0 +1,250 @@
+// Taylor Metal catalog menu and manufacturer's product sheets. Coverage and rib dimensions are in inches.
+// maxLength is the published standard length in feet; factory capability can vary.
+// A record without shape is an official drawing reference until its geometry is reviewed.
+export const PANEL_CATALOG = [
+ {"id":"easy-lock","name":"Easy-Lock™","group":"Standing seam","uses":["roof","wall"],"url":"https://taylormetal.com/products/standing-seam-panels/easy-lock/","widths":[12,16],"height":1,"maxLength":35,"shape":"seam","cap":0.375,"note":"26 ga is listed for 12″ coverage.","pans":["striated","accent","flat"],"image":"uploads/2026/08/Easy-Lock-1in-Clip-Relief-Striations-1024x791.jpg"},
+ {"id":"streamline","name":"StreamLine™","group":"Standing seam","uses":["roof","wall"],"url":"https://taylormetal.com/products/standing-seam-panels/streamline/","widths":[16],"height":1,"maxLength":35,"shape":"seam","cap":0.375,"pans":["striated","accent"],"image":"uploads/2020/07/StreamLine-1622-Striations-Screw-Concealer-Notched-768x412.jpg"},
+ {"id":"streamline-12in","name":"StreamLine™ 12IN / Snap-Loc","group":"Standing seam","uses":["roof","wall"],"url":"https://taylormetal.com/products/standing-seam-panels/streamline-12in/","widths":[12],"height":1,"maxLength":35,"shape":"seam","cap":0.375,"pans":["striated","accent"],"image":"uploads/2020/07/StreamLine-1622-Striations-Screw-Concealer-Notched-768x412.jpg"},
+ {"id":"loc-rib","name":"Loc-Rib™","group":"Standing seam","uses":["roof"],"url":"https://taylormetal.com/products/standing-seam-panels/loc-rib/","widths":[16],"height":0.875,"maxLength":40,"shape":"seam","cap":0.375,"image":"uploads/2024/12/Loc-Rib-768x593.jpg","pans":["accent"]},
+ {"id":"versa-span-produced-in-salem","name":"Versa-Span™ · Salem","group":"Standing seam","uses":["roof","wall"],"url":"https://taylormetal.com/products/standing-seam-panels/versa-span-produced-in-salem/","widths":[12,14,16,18],"height":1.75,"maxLength":60,"shape":"seam","pans":["striated","accent","flat"],"image":"smush-webp/2019/05/Versa-Span-accent-ribs.png.webp"},
+ {"id":"versa-span-produced-in-ca","name":"Versa-Span™ · California","group":"Standing seam","uses":["roof","wall"],"url":"https://taylormetal.com/products/standing-seam-panels/versa-span-produced-in-ca/","widths":[12,14,16,18],"height":1.75,"maxLength":60,"shape":"seam","pans":["striated","accent","pencil","flat"],"image":"uploads/2021/12/Versa-Span-18in-Striations-riverside-scaled-e1726855462891-768x585.jpg"},
+ {"id":"clip-lock-produced-in-ca-100","name":"Clip-Lock 100 · California","group":"Standing seam","uses":["roof"],"url":"https://taylormetal.com/products/standing-seam-panels/clip-lock-produced-in-ca/","widths":[13,17],"height":1,"maxLength":50,"shape":"seam","pans":["striated","accent","flat"],"image":"uploads/2019/05/04-Striation-Clip-Lock-768x418.jpg"},
+ {"id":"clip-lock-produced-in-ca-150","name":"Clip-Lock 150 · California","group":"Standing seam","uses":["roof"],"url":"https://taylormetal.com/products/standing-seam-panels/clip-lock-produced-in-ca/","widths":[15.5],"height":1.5,"maxLength":50,"shape":"seam","pans":["striated","accent","flat"],"image":"uploads/2019/05/04-Striation-Clip-Lock-768x418.jpg"},
+ {"id":"slim-lock-produced-in-or","name":"Slim-Lock™","group":"Standing seam","uses":["roof"],"url":"https://taylormetal.com/products/standing-seam-panels/slim-lock-produced-in-or/","widths":[12,16,20],"height":1.5,"maxLength":60,"shape":"seam","cap":0.375,"note":"Actual coverage depends on the selected configuration. Listed widths are nominal for 24 ga.","nominal":true,"pans":["striated","accent","flat"],"image":"uploads/2025/08/Slim-Lock-Accent-Ribs-768x593.jpg"},
+ {"id":"sl-15","name":"SL-15","group":"Standing seam","uses":["roof"],"url":"https://taylormetal.com/products/standing-seam-panels/sl-15/","widths":[15],"height":1.5,"shape":"seam","note":"Length is site and production dependent. Confirm the order limit.","pans":["striated","pencil","flat"],"image":"uploads/2024/12/SL-15-768x593.jpg"},
+ {"id":"t-panel-with-batten-narrow","name":"T-Panel · narrow batten","group":"Standing seam","uses":["roof"],"url":"https://taylormetal.com/products/standing-seam-panels/t-panel-with-batten/","widths":[12,16,20],"height":1,"maxLength":null,"shape":"seam","cap":0.5,"note":"Product and technical sheet list 60 ft; collection brochure lists 35 ft. Confirm the limit with Taylor Metal.","nominal":true,"pans":["striated","accent","flat"],"image":"uploads/2024/08/T-Panel-1-768x329.png"},
+ {"id":"t-panel-with-batten-wide","name":"T-Panel · wide batten","group":"Standing seam","uses":["roof"],"url":"https://taylormetal.com/products/standing-seam-panels/t-panel-with-batten/","widths":[14,18],"height":1.875,"maxLength":null,"shape":"seam","cap":1,"note":"Product and technical sheet list 60 ft; collection brochure lists 35 ft. Confirm the limit with Taylor Metal.","nominal":true,"pans":["striated","accent","flat"],"image":"uploads/2024/08/T-Panel-1-768x329.png"},
+ {"id":"ms-100","name":"MS-100™","group":"Mechanically seamed","uses":["roof"],"url":"https://taylormetal.com/products/mechanically-seamed-panels/ms-100/","widths":[13,17,21],"height":1,"maxLength":60,"shape":"seam","pans":["striated","accent","flat"],"image":"smush-webp/2019/05/MS100-accent-ribs.png.webp"},
+ {"id":"ms-150","name":"MS-150™","group":"Mechanically seamed","uses":["roof"],"url":"https://taylormetal.com/products/mechanically-seamed-panels/ms-150/","widths":[12,16,20],"height":1.5,"maxLength":60,"shape":"seam","pans":["striated","accent","flat"],"image":"uploads/2019/05/MS150-Striation-768x415.jpg"},
+ {"id":"ms-200","name":"MS-200™","group":"Mechanically seamed","uses":["roof"],"url":"https://taylormetal.com/products/mechanically-seamed-panels/ms-200/","widths":[12,14,16,18],"height":2,"maxLength":60,"shape":"seam","pans":["striated","accent","flat"],"image":"uploads/2024/08/MS200-Striations-Clip-Relief-scaled-1-768x427.jpg"},
+ {"id":"maxrun-238","name":"MaxRun-238™","group":"Mechanically seamed","uses":["roof"],"url":"https://taylormetal.com/products/mechanically-seamed-panels/maxrun-238/","widths":[12,14,16,18,24],"height":2.375,"maxLength":60,"shape":"seam","note":"Confirm profile dimensions for the project’s plant.","nominal":true,"pans":["striated","accent","flat"],"image":"smush-webp/2026/02/MaxRun-238-Plateau-Rib-18in-768x593.jpg.webp"},
+ {"id":"board-batten","name":"Board and Batten Siding Panel","group":"Siding and soffit","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/board-batten/","widths":[12,16],"height":0.75,"maxLength":35,"shape":"seam","cap":2,"base":2.06,"image":"smush-webp/2025/09/Board-and-Batten-12in-Lightly-Striated-768x593.jpg.webp","pans":["light-striated","flat"],"note":"Flat pan is available by inquiry."},
+ {"id":"smoothwall","name":"SmoothWall™ · 1″ depth","group":"Siding and soffit","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/smoothwall/","widths":[12],"height":1,"maxLength":35,"shape":"seam","cap":0.14,"base":0.24,"note":"Published size also includes a 1½″ configuration. Inquire above 14 ft. Flat pan is listed in 24 or 22 ga steel and .032″ or .040″ aluminum.","pans":["striated","single-v","double-v","flat"],"image":"uploads/2019/08/Smooth-Wall-Striations-768x474.jpg"},
+ {"id":"smoothwall-1-5","name":"SmoothWall · 1½″ depth","group":"Siding and soffit","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/smoothwall/","widths":[12],"height":1.5,"maxLength":35,"shape":"seam","cap":0.14,"base":0.24,"note":"Inquire above 14 ft. Flat pan is listed in 24 or 22 ga steel and .032″ or .040″ aluminum.","pans":["striated","single-v","double-v","flat"],"image":"uploads/2019/08/Smooth-Wall-Striations-768x474.jpg"},
+ {"id":"lifetime-soffit","name":"Lifetime Soffit™","group":"Siding and soffit","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/lifetime-soffit/","widths":[12],"height":1,"maxLength":35,"note":"Soffit profile. Confirm the option, ventilation and lengths over 14 ft.","image":"uploads/2019/05/Perforated-Soffit-img64-66-768x513.jpg"},
+ {"id":"shadowline","name":"ShadowLine™","group":"Siding and soffit","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/shadowline/","widths":[11,12,13,14,15],"maxLength":35,"note":"Published coverage range 11–15″. Inquire above 14 ft.","image":"uploads/2019/05/ShadowLine-Single-Panel-768x435.jpg"},
+ {"id":"ci-2-16","name":"CI-2-16 (C-1)","group":"Integral","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/integral-series/ci-2-16/","widths":[16],"height":0.875,"shape":"seam","cap":1.25,"base":1.75,"image":"uploads/2024/12/C-1-clip-24ga-768x593.jpg"},
+ {"id":"ci-3b-16","name":"CI-3B-16 (C-2)","group":"Integral","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/integral-series/ci-3b-16/","widths":[16],"height":0.75,"shape":"seam","cap":1.25,"base":1.35,"image":"uploads/2024/12/C-2-Clip-24ga-768x593.jpg"},
+ {"id":"ci-7-16","name":"CI-7-16 (C-3)","group":"Integral","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/integral-series/ci-7-16/","widths":[16],"height":0.875,"shape":"seam","cap":1.75,"base":1.85,"image":"uploads/2024/12/C-3-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"ci-10-16","name":"CI-10-16 (C-4)","group":"Integral","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/integral-series/ci-10-16/","image":"uploads/2024/12/C-4-clip-24ga-768x593.jpg"},
+ {"id":"ic60-12","name":"IC60-12 (C-5 (1-1/4″ Height))","group":"Contour Classic","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/inflexion/ic60-12/","image":"uploads/2024/12/C-5-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"c-5-1-1-2-height","name":"C-5 (1-1/2″ Height)","group":"Contour Classic","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/contour-classic-series/c-5-1-1-2-height/","image":"uploads/2024/12/C-5-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"nx-2","name":"NX-2 (C-6)","group":"Neo","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/neo-series/nx-2/","image":"uploads/2024/12/C-6-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"ic80-12","name":"IC80-12 (C-7 (1-1/4″ Height))","group":"Contour Classic","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/inflexion/ic80-12/","image":"uploads/2024/12/C-7-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"c-7-1-1-2-height","name":"C-7 (1-1/2″ Height)","group":"Contour Classic","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/contour-classic-series/c-7-1-1-2-height/","image":"uploads/2024/12/C-7-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"ic90-12","name":"IC90-12 (C-8)","group":"Contour Classic","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/inflexion/ic90-12/","image":"uploads/2024/12/C-8-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"ic40-12","name":"IC40-12 (C-9 (1-1/4″ Height))","group":"Contour Classic","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/inflexion/ic40-12/","image":"uploads/2024/12/C-9-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"c-9-1-1-4-height","name":"C-9 (1-1/2″ Height)","group":"Contour Classic","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/contour-classic-series/c-9-1-1-4-height/","image":"uploads/2024/12/C-9-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"c-10","name":"C-10 (1-1/4″ Height)","group":"Contour Classic","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/contour-classic-series/c-10/","image":"uploads/2024/12/C-10-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"c-10-1-1-2-height","name":"C-10 (1-1/2″ Height)","group":"Contour Classic","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/contour-classic-series/c-10-1-1-2-height/"},
+ {"id":"ct-12","name":"CT-12 (C1-A)","group":"Trinity","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/trinity-series/ct-12/","image":"uploads/2024/12/C1-A-24ga-Clip-Panel-768x593.jpg"},
+ {"id":"ci-6-12","name":"CI-6-12 (C1-B)","group":"Integral","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/integral-series/ci-6-12/","image":"uploads/2024/12/C1-B-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"ct-10","name":"CT-10 (C1-C)","group":"Trinity","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/trinity-series/ct-10/","image":"uploads/2024/12/C1-C-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"ct-9","name":"CT-9 (C1-D)","group":"Trinity","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/trinity-series/ct-9/","image":"uploads/2024/12/C1-D-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"as-b-12","name":"AS-B-12 (C2-A)","group":"Contour Classic","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/inception-series/as-b-12/","image":"uploads/2024/12/C2-A-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"as-c-12","name":"AS-C-12 (C2-B)","group":"Contour Classic","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/inception-series/as-c-12/","image":"uploads/2024/12/C2-B-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"as-d-12","name":"AS-D-12 (C2-C)","group":"Contour Classic","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/inception-series/as-d-12/","image":"uploads/2024/12/C2-C-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"as-e-12","name":"AS-E-12 (C2-D)","group":"Contour Classic","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/inception-series/as-e-12/","image":"uploads/2024/12/C2-D-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"as-a-12","name":"AS-A-12 (C2-E)","group":"Contour Classic","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/inception-series/as-a-12/","image":"uploads/2024/12/C2-E-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"ct-2","name":"CT-2 (C5-A)","group":"Trinity","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/trinity-series/ct-2/","image":"uploads/2024/12/C5-A-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"ct-1","name":"CT-1 (C6-A)","group":"Trinity","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/trinity-series/ct-1/","image":"uploads/2024/12/C6-A-Clip-24ga-Panel-scaled-1-768x594.jpg"},
+ {"id":"ct-3","name":"CT-3 (C8-A)","group":"Trinity","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/trinity-series/ct-3/","image":"uploads/2024/12/C8-A-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"ct-8","name":"CT-8 (C8-B)","group":"Trinity","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/trinity-series/ct-8/","image":"uploads/2024/12/C8-B-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"nx-3a","name":"NX-3A (C9-A)","group":"Neo","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/neo-series/nx-3a/","image":"uploads/2024/12/C9-A-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"ce-a","name":"CE-A","group":"Contour Express","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/contour-express-series-produced-in-or/ce-a/","widths":[16],"height":0.875,"shape":"seam","cap":1,"base":1.625,"image":"uploads/2024/11/CE-A-Clip-768x593.jpg"},
+ {"id":"ce-b","name":"CE-B","group":"Contour Express","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/contour-express-series-produced-in-or/ce-b/","image":"uploads/2024/11/CE-B-768x594.png"},
+ {"id":"ce-c","name":"CE-C","group":"Contour Express","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/contour-express-series-produced-in-or/ce-c/","image":"uploads/2024/11/CE-C-Clip-768x593.jpg"},
+ {"id":"ce-d","name":"CE-D","group":"Contour Express","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/contour-express-series-produced-in-or/ce-d/","widths":[12],"height":0.875,"shape":"seam","cap":1,"base":2.375,"image":"uploads/2024/11/CE-D-Clip-Panel-768x593.jpg"},
+ {"id":"ce-e","name":"CE-E","group":"Contour Express","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/contour-express-series-produced-in-or/ce-e/","widths":[8],"height":0.875,"shape":"seam","cap":1,"base":2.375,"image":"uploads/2024/12/CE-E-Clip-768x593.jpg"},
+ {"id":"cr-a-1","name":"CR-A · 1″ step","group":"Contour Reveal","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/contour-reveal/cr-a/","widths":[12],"height":1,"shape":"step","points":[[0,0],[0.5,0],[0.5,1],[1,1],[1,0]],"image":"uploads/2024/12/CR-A-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"cr-a-1.5","name":"CR-A · 1.5″ step","group":"Contour Reveal","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/contour-reveal/cr-a/","widths":[12],"height":1.5,"shape":"step","points":[[0,0],[0.5,0],[0.5,1],[1,1],[1,0]],"image":"uploads/2024/12/CR-A-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"cr-b","name":"CR-B","group":"Contour Reveal","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/contour-reveal/cr-b/","image":"uploads/2024/12/CR-B-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"cr-c","name":"CR-C","group":"Contour Reveal","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/contour-reveal/cr-c/","image":"uploads/2024/12/CR-C-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"cr-d","name":"CR-D","group":"Contour Reveal","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/contour-reveal/cr-d/","image":"uploads/2024/12/CR-D-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"cr-e","name":"CR-E","group":"Contour Reveal","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/contour-reveal/cr-e/","image":"uploads/2024/12/CR-E-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"cr-f","name":"CR-F","group":"Contour Reveal","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/contour-reveal/cr-f/","image":"uploads/2024/12/CR-F-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"cr-g","name":"CR-G","group":"Contour Reveal","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/contour-reveal/cr-g/","image":"uploads/2024/12/CR-G-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"elv-28","name":"ELV-28","group":"Elevated","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/elevated-series/elv-28/","image":"uploads/2024/11/ELV28-24ga-Clip-768x593.jpg"},
+ {"id":"elv-37","name":"ELV-37","group":"Elevated","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/elevated-series/elv-37/","image":"uploads/2024/11/ELV37-24ga-Clip-768x593.jpg"},
+ {"id":"elv-46","name":"ELV-46","group":"Elevated","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/elevated-series/elv-46/","image":"uploads/2024/11/ELV46-24ga-Clip-768x593.jpg"},
+ {"id":"elv-5","name":"ELV-55","group":"Elevated","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/elevated-series/elv-5/","image":"uploads/2024/11/ELV55-24ga-Clip-768x593.jpg"},
+ {"id":"ci-2-12","name":"CI-2-12","group":"Integral","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/integral-series/ci-2-12/","image":"uploads/2024/12/CI-2-12-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"ci-3-12","name":"CI-3-12","group":"Integral","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/integral-series/ci-3-12/"},
+ {"id":"ci-3-16","name":"CI-3-16","group":"Integral","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/integral-series/ci-3-16/"},
+ {"id":"ci-4-12","name":"CI-4-12","group":"Integral","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/integral-series/ci-4-12/"},
+ {"id":"ci-4-16","name":"CI-4-16","group":"Integral","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/integral-series/ci-4-16/"},
+ {"id":"ci-5-12","name":"CI-5-12","group":"Integral","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/integral-series/ci-5-12/"},
+ {"id":"ci-7-12","name":"CI-7-12","group":"Integral","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/integral-series/ci-7-12/"},
+ {"id":"ci-8-12","name":"CI-8-12","group":"Integral","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/integral-series/ci-8-12/"},
+ {"id":"ci-9-12","name":"CI-9-12","group":"Integral","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/integral-series/ci-9-12/"},
+ {"id":"ci-9-16","name":"CI-9-16","group":"Integral","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/integral-series/ci-9-16/"},
+ {"id":"ic50-12","name":"IC50-12","group":"Concealed fastener","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/inflexion/ic50-12/"},
+ {"id":"ic70-12","name":"IC70-12","group":"Concealed fastener","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/inflexion/ic70-12/"},
+ {"id":"nx-1","name":"NX-1","group":"Neo","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/neo-series/nx-1/","image":"smush-webp/2024/12/C-5-Clip-24ga-Panel-1024x791.jpg.webp"},
+ {"id":"nx-3","name":"NX-3","group":"Neo","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/neo-series/nx-3/"},
+ {"id":"nx-4","name":"NX-4","group":"Neo","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/neo-series/nx-4/"},
+ {"id":"nx-6","name":"NX-6","group":"Neo","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/neo-series/nx-6/"},
+ {"id":"nx-7","name":"NX-7","group":"Neo","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/neo-series/nx-7/"},
+ {"id":"nx-8","name":"NX-8","group":"Neo","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/neo-series/nx-8/"},
+ {"id":"nx-9","name":"NX-9","group":"Neo","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/neo-series/nx-9/"},
+ {"id":"nx-10","name":"NX-10","group":"Neo","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/neo-series/nx-10/"},
+ {"id":"nx-11","name":"NX-11","group":"Neo","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/neo-series/nx-11/"},
+ {"id":"nx-12","name":"NX-12","group":"Neo","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/neo-series/nx-12/","image":"smush-webp/2026/11/NX-12-24GA-CLIP-1024x791.jpg.webp"},
+ {"id":"nx-14","name":"NX-14","group":"Neo","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/neo-series/nx-14/","image":"smush-webp/2026/11/NX-14-24ga-Clip-Panel-1024x791.jpg.webp"},
+ {"id":"ct-2-12-5-8-tall-rib-available-in-riverside-ca","name":"CT-META (5/8″ Tall Rib Available in Riverside CA / Sacramento CA)","group":"Trinity","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/trinity-series/ct-2-12-5-8-tall-rib-available-in-riverside-ca/","image":"uploads/2024/12/CT-2-12-C-Meta-24ga-clip-768x593.jpg"},
+ {"id":"ct-2c","name":"CT-2C","group":"Trinity","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/trinity-series/ct-2c/"},
+ {"id":"ct-2-12-3-4-tall-rib-available-in-salem-or-or-riverside-ca","name":"CT-META (3/4″ Tall Rib Available in Salem OR)","group":"Trinity","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/trinity-series/ct-2-12-3-4-tall-rib-available-in-salem-or-or-riverside-ca/","image":"uploads/2024/12/CT-2-12-C-Meta-24ga-clip-768x593.jpg"},
+ {"id":"ct-4","name":"CT-4","group":"Trinity","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/trinity-series/ct-4/","image":"uploads/2024/12/CR-A-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"ct-5","name":"CT-5","group":"Trinity","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/trinity-series/ct-5/","image":"uploads/2024/12/CR-B-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"ct-6","name":"CT-6","group":"Trinity","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/trinity-series/ct-6/","image":"uploads/2024/12/CR-C-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"ct-7","name":"CT-7","group":"Trinity","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/trinity-series/ct-7/","image":"uploads/2024/12/CR-D-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"ct-11","name":"CT-11","group":"Trinity","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/trinity-series/ct-11/","image":"uploads/2024/12/C1-B-Clip-24ga-Panel-768x593.jpg"},
+ {"id":"chevron-v","name":"Chevron V™","group":"Impact","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/impact-series/chevron-v/","image":"uploads/2024/12/Chevron-V-768x594.png"},
+ {"id":"chevron-w","name":"Chevron W™","group":"Impact","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/impact-series/chevron-w/"},
+ {"id":"cascade-1","name":"Cascade 1","group":"Impact","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/impact-series/cascade-1/"},
+ {"id":"cascade-2","name":"Cascade 2","group":"Impact","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/impact-series/cascade-2/","image":"smush-webp/2024/12/Cascade-2-24ga-Clip-1024x791.jpg.webp"},
+ {"id":"cascade-3","name":"Cascade 3","group":"Impact","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/impact-series/cascade-3/","image":"uploads/2023/12/Cascade-3-Panel-768x593.jpg"},
+ {"id":"cascade-4","name":"Cascade 4","group":"Impact","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/impact-series/cascade-4/"},
+ {"id":"cascade-9","name":"Cascade 9","group":"Impact","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/impact-series/cascade-9/","image":"smush-webp/2024/12/P-9-Render-1024x791.png.webp"},
+ {"id":"cascade-10","name":"Cascade 10","group":"Impact","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/impact-series/cascade-10/","image":"uploads/2026/11/Cascade-10-24ga-clip-1024x791.jpg"},
+ {"id":"zig-zag","name":"Zig Zag™","group":"Impact","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/impact-series/zig-zag/","image":"smush-webp/2024/12/Zig-Zag-panel-1024x791.png.webp"},
+ {"id":"sw-16","name":"SW-16","group":"Siding and soffit","uses":["wall"],"url":"https://taylormetal.com/products/concealed-fastener-panels/sw-16/","widths":[16],"height":1,"shape":"seam","cap":0.16,"base":0.24,"image":"smush-webp/2024/12/SW-16-1024x791.jpg.webp","secondary":{"stations":[0.5],"height":0.07,"base":0.18}},
+ {"id":"tuff-rib","name":"Tuff Rib","group":"Exposed fastener","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/tuff-rib/","widths":[36],"height":0.75,"maxLength":45,"pitch":9,"shape":"rib","cap":0.75,"base":1.8125,"image":"smush-webp/2019/05/Tuff-Rib-cocoa-brown.png.webp"},
+ {"id":"ultra-panel","name":"Ultra-Panel™","group":"Exposed fastener","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/ultra-panel/","widths":[36],"height":0.75,"maxLength":45,"pitch":9,"shape":"rib","cap":0.625,"base":1.6,"image":"uploads/2024/08/Ultra-Rib-768x308.jpg"},
+ {"id":"rolled-rib","name":"Rolled Rib™","group":"Exposed fastener","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/rolled-rib/","widths":[36],"height":0.75,"maxLength":45,"pitch":9,"shape":"rib","cap":0.625,"base":1.6,"image":"uploads/2024/12/Rolled-Rib-768x593.jpg"},
+ {"id":"northern-rib","name":"Northern Rib™ (Coming Early 2027)","group":"Exposed fastener","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/northern-rib/","note":"Taylor Metal lists this product as coming in early 2027.","widths":[36],"height":0.625,"image":"uploads/2026/09/Northern-Rib-Panel-768x593.jpg"},
+ {"id":"t-3","name":"T-3™","group":"Exposed fastener","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/t-3/","widths":[36],"height":0.75,"maxLength":45,"pitch":9,"shape":"rib","cap":0.5,"base":2.625,"image":"smush-webp/2019/05/T-3-768x203.png.webp"},
+ {"id":"gr-7","name":"GR-7™","group":"Exposed fastener","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/gr-7/","widths":[36],"height":0.6875,"maxLength":45,"pitch":6,"shape":"rib","cap":0.75,"base":2.1875,"note":"24″ coverage is available as GR-5.","image":"uploads/2019/05/GR-7-flat-768x210.png"},
+ {"id":"max-corr-29","name":"Max Corr · 29 ga","group":"Exposed fastener","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/max-corr/","widths":[34.625],"height":0.5,"maxLength":30,"pitch":2.6666666666666665,"shape":"wave","image":"uploads/2019/05/2-12-corrugated.png"},
+ {"id":"max-corr-26-24-22","name":"Max Corr · 26/24/22 ga or aluminum","group":"Exposed fastener","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/max-corr/","widths":[37.25],"height":0.5,"maxLength":30,"pitch":2.6666666666666665,"shape":"wave","image":"uploads/2019/05/2-12-corrugated.png"},
+ {"id":"2-1-2-corrugated","name":"2-1/2″ Corrugated","group":"Exposed fastener","uses":["wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/2-1-2-corrugated/","widths":[24],"height":0.5,"maxLength":30,"pitch":2.6666666666666665,"shape":"wave","image":"uploads/2019/05/2-12-corrugated.png"},
+ {"id":"pbr","name":"PBR","group":"Exposed fastener","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/pbr/","widths":[36],"height":1.25,"maxLength":45,"pitch":12,"shape":"rib","cap":1,"base":3.25,"secondary":{"stations":[0.33,0.67],"height":0.125,"base":0.64},"image":"uploads/2019/05/PBR.png"},
+ {"id":"marion-r-panel","name":"Marion “R” Panel™","group":"Exposed fastener","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/marion-r-panel/","widths":[36],"height":1.25,"maxLength":45,"pitch":12,"shape":"rib","cap":0.875,"base":3.25,"secondary":{"stations":[0.33,0.67],"height":0.125,"base":0.64},"image":"uploads/2019/05/Marion-R-Panel-768x172.png"},
+ {"id":"hr-34-produced-in-or","name":"HR-34™ · Salem/Spokane","group":"Exposed fastener","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/hr-34-produced-in-or/","widths":[34],"height":1.5,"maxLength":45,"pitch":8.5,"shape":"rib","cap":1.75,"base":2.2,"image":"uploads/2019/05/HR34-768x219.png"},
+ {"id":"hr-34-produced-in-ca","name":"HR-34™ · Riverside","group":"Exposed fastener","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/hr-34-produced-in-ca/","widths":[34],"height":1.5,"maxLength":20.833333333333332,"pitch":8.5,"shape":"rib","cap":1.75,"base":2.2,"image":"uploads/2019/05/HR34-768x219.png"},
+ {"id":"classic-7-8-corrugated-produced-in-salem","name":"Classic 7/8″ Corrugated™ · Salem","group":"Exposed fastener","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/classic-7-8-corrugated-produced-in-salem/","widths":[32],"height":0.875,"maxLength":45,"pitch":2.6666666666666665,"shape":"wave","image":"uploads/2019/05/78-corrugated.png"},
+ {"id":"classic-7-8-corrugated-produced-in-riverside","name":"Classic 7/8″ Corrugated™ · Riverside","group":"Exposed fastener","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/classic-7-8-corrugated-produced-in-riverside/","widths":[37.333333333333336],"height":0.875,"maxLength":45,"pitch":2.6666666666666665,"shape":"wave","image":"uploads/2021/12/CA-7-8-Corrugated-scaled-e1641842758501-1024x690.jpg"},
+ {"id":"classic-7-8-corrugated-produced-in-spokane-roof","name":"Classic 7/8″ Corrugated · Spokane roof","group":"Exposed fastener","uses":["roof"],"url":"https://taylormetal.com/products/exposed-fastener-panels/classic-7-8-corrugated-produced-in-spokane/","widths":[29.3125],"height":0.875,"maxLength":45,"pitch":2.6666666666666665,"shape":"wave","image":"uploads/2024/12/7-8-Corrugated-1024x791.jpg"},
+ {"id":"classic-7-8-corrugated-produced-in-spokane-wall","name":"Classic 7/8″ Corrugated · Spokane wall","group":"Exposed fastener","uses":["wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/classic-7-8-corrugated-produced-in-spokane/","widths":[32],"height":0.875,"maxLength":45,"pitch":2.6666666666666665,"shape":"wave","image":"uploads/2024/12/7-8-Corrugated-1024x791.jpg"},
+ {"id":"classic-v-rib","name":"Classic V-Rib™","group":"Exposed fastener","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/classic-v-rib/","widths":[36],"height":1.375,"maxLength":20.833333333333332,"pitch":4.5,"shape":"v","cap":1,"base":2.15,"image":"smush-webp/2019/05/Classic-V-Rib.png.webp"},
+ {"id":"br-36","name":"BR-36","group":"Exposed fastener","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/br-36/","widths":[36],"height":1.5,"maxLength":20.5,"pitch":7.2,"shape":"rib","cap":1.375,"base":3.75,"image":"smush-webp/2022/08/BR-36-Standard-scaled-e1659730083300-1024x608.jpg.webp"},
+ {"id":"4-0-rib","name":"4.0 Rib","group":"Exposed fastener","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/4-0-rib/","widths":[32],"height":1,"maxLength":20.5,"pitch":4,"shape":"rib","cap":1.375,"base":1.625,"image":"smush-webp/2019/05/09-40-Rib-1024x454.jpg.webp"},
+ {"id":"hr-36","name":"TR-7.2","group":"Exposed fastener","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/hr-36/","widths":[36],"height":1.5,"maxLength":20.833333333333332,"pitch":7.2,"shape":"rib","cap":2.125,"base":3.1,"image":"smush-webp/2024/08/TR-7.2-Panel-1024x791.jpg.webp"},
+ {"id":"tmp-10-alpha","name":"TMP 10-Alpha","group":"Vertical Series","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/vertical-series/tmp-10-alpha/","widths":[28],"height":1.375,"maxLength":20.833333333333332,"image":"uploads/2023/10/TMP-10-Alpha-24GA-768x594.png"},
+ {"id":"tmp-10-beta","name":"TMP 10-Beta","group":"Vertical Series","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/vertical-series/tmp-10-beta/","widths":[30],"height":1.5,"maxLength":20.833333333333332,"image":"uploads/2023/10/TMP-10-Beta-24GA-768x594.png"},
+ {"id":"109534-2","name":"TMP 10-Charlie","group":"Vertical Series","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/vertical-series/109534-2/","widths":[30],"height":1.5,"maxLength":20.833333333333332,"image":"uploads/2023/10/TMP-10-Charlie-24GA-768x594.png"},
+ {"id":"tmp-10-delta","name":"TMP 10-Delta","group":"Vertical Series","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/vertical-series/tmp-10-delta/","widths":[36],"height":1.375,"maxLength":20.833333333333332,"image":"uploads/2023/10/TMP-10-Delta-24GA-768x594.png"},
+ {"id":"tmp-10-echo","name":"TMP 10-Echo","group":"Vertical Series","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/vertical-series/tmp-10-echo/","widths":[36],"maxLength":20.833333333333332,"image":"uploads/2024/12/TMP-10-Echo-Rener-3-768x594.png"},
+ {"id":"tmp-625-4-5-36","name":"TMP .625-4.5-36","group":"Vertical Series","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/vertical-series/tmp-625-4-5-36/","widths":[36],"height":0.625,"maxLength":20.833333333333332,"pitch":4.5,"shape":"rib","image":"uploads/2024/12/TMP-.625-4.5-36-24GA-768x594.png"},
+ {"id":"tmp-75-4-32-copy","name":"TMP .75-4-24","group":"Vertical Series","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/vertical-series/tmp-75-4-32-copy/","widths":[24],"height":0.75,"maxLength":20.833333333333332,"pitch":4,"shape":"rib","image":"uploads/2026/07/TMP-75-4-24-768x594.png"},
+ {"id":"tmp-75-4-32","name":"TMP .75-4-32","group":"Vertical Series","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/vertical-series/tmp-75-4-32/","widths":[32],"height":0.75,"maxLength":20.833333333333332,"pitch":4,"shape":"rib","image":"uploads/2023/10/TMP-.75-4-32-24GA-768x594.png"},
+ {"id":"tmp-75-4-5-31-5","name":"TMP .75-4.5-31.5","group":"Vertical Series","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/vertical-series/tmp-75-4-5-31-5/","widths":[31.5],"height":0.75,"maxLength":20.833333333333332,"pitch":4.5,"shape":"rib","image":"uploads/2025/07/TMP-75-45-315-1-768x594.png"},
+ {"id":"tmp-75-6-36","name":"TMP .75-6-36","group":"Vertical Series","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/vertical-series/tmp-75-6-36/","widths":[36],"height":0.75,"maxLength":20.833333333333332,"pitch":6,"shape":"rib","image":"uploads/2023/10/TMP-.75-6-36-24GA-768x594.png"},
+ {"id":"tmp-625-7-33-44","name":"TMP Wall .625-7.33-44","group":"Cladding Series","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/cladding-series/tmp-625-7-33-44/","widths":[44],"height":0.625,"maxLength":20.833333333333332,"pitch":7.33,"shape":"rib","image":"uploads/2023/10/TMP-Wall-.625-7.33-44-24GA-768x594.png"},
+ {"id":"tmp-1-6-36","name":"TMP 1-6-36","group":"Cladding Series","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/cladding-series/tmp-1-6-36/","widths":[36],"height":1,"maxLength":20.833333333333332,"pitch":6,"shape":"rib","image":"uploads/2024/12/TMP-1-6-36-24GA-768x594.png"},
+ {"id":"tmp-1-8-40","name":"TMP 1-8-40","group":"Cladding Series","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/cladding-series/tmp-1-8-40/","widths":[40],"height":1,"maxLength":20.833333333333332,"pitch":8,"shape":"rib","image":"uploads/2023/10/TMP-1-8-40-24GA-768x594.png"},
+ {"id":"tmp-1-5-4-875-34","name":"TMP 1.5-4.875-34","group":"Ribbed Series","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/ribbed-series/tmp-1-5-4-875-34/","widths":[34],"height":1.5,"maxLength":20.833333333333332,"pitch":4.875,"shape":"rib","image":"uploads/2024/12/TMP-15-4.875-34-24GA-768x594.png"},
+ {"id":"tmp-1-5-6-36","name":"TMP 1.5-6-36","group":"Ribbed Series","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/ribbed-series/tmp-1-5-6-36/","widths":[36],"height":1.5,"maxLength":20.833333333333332,"pitch":6,"shape":"rib","image":"uploads/2023/10/TMP-1.5-6-36-24GA-768x594.png"},
+ {"id":"tmp-1-5-8-32","name":"TMP 1.5-8-32","group":"Ribbed Series","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/ribbed-series/tmp-1-5-8-32/","widths":[32],"height":1.5,"maxLength":20.833333333333332,"pitch":8,"shape":"rib","image":"uploads/2023/10/TMP-15-78-311875-24GA-768x594.png"},
+ {"id":"tmp-1-5-7-8-39","name":"TMP 1.5-7.8-39","group":"Ribbed Series","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/ribbed-series/tmp-1-5-7-8-39/","widths":[39],"height":1.5,"maxLength":20.833333333333332,"pitch":7.8,"shape":"rib","image":"uploads/2023/10/TMP-15-78-311875-24GA-768x594.png"},
+ {"id":"tmp-1-5-9-36","name":"TMP 1.5-9-36","group":"Ribbed Series","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/ribbed-series/tmp-1-5-9-36/","widths":[36],"height":1.5,"maxLength":20.833333333333332,"pitch":9,"shape":"rib","image":"uploads/2023/10/TMP-1.5-9-36-24GA-768x594.png"},
+ {"id":"tmp-1-75-5-33-32","name":"TMP 1.75-5.33-32","group":"Ribbed Series","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/ribbed-series/tmp-1-75-5-33-32/","widths":[32],"height":1.75,"maxLength":20.833333333333332,"pitch":5.33,"shape":"rib","image":"uploads/2023/10/TMP-1.75-5.33-32-24GA-768x594.png"},
+ {"id":"tmp-1-75-9-36","name":"TMP 1.75-9-36","group":"Ribbed Series","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/ribbed-series/tmp-1-75-9-36/","widths":[36],"height":1.75,"maxLength":20.833333333333332,"pitch":9,"shape":"rib","image":"uploads/2023/10/TMP-1.75-9-36-24GA-768x594.png"},
+ {"id":"tmp-2-6-30","name":"TMP 2-6-30","group":"Long Span Series","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/long-span-series/tmp-2-6-30/","widths":[30],"height":2,"maxLength":20.833333333333332,"pitch":6,"shape":"rib","image":"uploads/2024/09/TMP-2-6-30-24GA-768x594.png"},
+ {"id":"tmp-2-8-32","name":"TMP 2-8-32","group":"Long Span Series","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/long-span-series/tmp-2-8-32/","widths":[32],"height":2,"maxLength":20.833333333333332,"pitch":8,"shape":"rib","image":"uploads/2023/10/TMP-2-8-32-24GA-768x594.png"},
+ {"id":"tmp-3-6-24","name":"TMP 3-6-24","group":"Long Span Series","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/long-span-series/tmp-3-6-24/","widths":[24],"height":3,"maxLength":20.833333333333332,"pitch":6,"shape":"rib","image":"uploads/2023/10/TMP-3-6-24-24GA-768x594.png"},
+ {"id":"tmp-3-8-24","name":"TMP 3-8-24","group":"Long Span Series","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/long-span-series/tmp-3-8-24/","widths":[24],"height":3,"maxLength":20.833333333333332,"pitch":8,"shape":"rib","image":"uploads/2023/10/TMP-3-8-24-24GA-768x594.png"},
+ {"id":"tmp-3-10-30","name":"TMP 3-10-30","group":"Long Span Series","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/long-span-series/tmp-3-10-30/","widths":[30],"height":3,"maxLength":20.833333333333332,"pitch":10,"shape":"rib","image":"uploads/2023/10/TMP-3-10-30-24GA-768x594.png"},
+ {"id":"tmp-3-5-10-30","name":"TMP 3.5-10-30","group":"Deep Rib Series","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/deep-rib-series/tmp-3-5-10-30/","widths":[30],"height":3.5,"maxLength":20.833333333333332,"pitch":10,"shape":"rib","image":"uploads/2024/09/TMP-3.5-10-30-24GA-768x594.png"},
+ {"id":"tmp-3-12-36","name":"TMP 3-12-36","group":"Deep Rib Series","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/deep-rib-series/tmp-3-12-36/","widths":[36],"height":3,"maxLength":20.833333333333332,"pitch":12,"shape":"rib","image":"uploads/2023/10/TMP-3-12-36-24GA-768x594.png"},
+ {"id":"tmp-4-10-30","name":"TMP 4-10-30","group":"Deep Rib Series","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/deep-rib-series/tmp-4-10-30/","widths":[30],"height":4,"maxLength":20.833333333333332,"pitch":10,"shape":"rib","image":"uploads/2023/10/TMP-4-10-30-24GA-768x594.png"},
+ {"id":"tmp-4-5-6-18","name":"TMP 4.5-6-18","group":"Deep Rib Series","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/deep-rib-series/tmp-4-5-6-18/","widths":[18],"height":4.5,"maxLength":20.833333333333332,"pitch":6,"shape":"rib","image":"uploads/2023/10/TMP-4.5-6-18-24GA-3-768x594.png"},
+ {"id":"tmp-4-12-24","name":"TMP 4-12-24","group":"Deep Rib Series","uses":["roof","wall"],"url":"https://taylormetal.com/products/exposed-fastener-panels/deep-rib-series/tmp-4-12-24/","widths":[24],"height":4,"maxLength":20.833333333333332,"pitch":12,"shape":"rib","image":"uploads/2023/10/TMP-4-12-24-24GA-768x594.png"}
+];
+
+// Screen color approximations from Taylor Metal's ArmorTech and Kynar 500 charts.
+export const PANEL_FINISHES = [
+ ["ArmorTech","Polar White","#e8eade"],
+ ["ArmorTech","Glacier White","#e1e3de"],
+ ["ArmorTech","Stone White","#cbd0c6"],
+ ["ArmorTech","Ivory","#dad0b5"],
+ ["ArmorTech","Light Stone","#c6b89b"],
+ ["ArmorTech","Sandstone","#a9987d"],
+ ["ArmorTech","Hickory","#887d6e"],
+ ["ArmorTech","Sand Gold","#b89a6f"],
+ ["ArmorTech","Ash Grey","#adb0a6"],
+ ["ArmorTech","Sterling Grey","#909490"],
+ ["ArmorTech","Charcoal Grey","#505552"],
+ ["ArmorTech","Tile Red","#964f43"],
+ ["ArmorTech","Tahoe Blue","#597483"],
+ ["ArmorTech","Pacific Blue","#34576c"],
+ ["ArmorTech","Sage Green","#768671"],
+ ["ArmorTech","Forest Green","#365447"],
+ ["ArmorTech","Pine Green","#34483b"],
+ ["ArmorTech","Desert Brown","#705b48"],
+ ["ArmorTech","Cocoa Brown","#685546"],
+ ["ArmorTech","Kodiak Brown","#514b43"],
+ ["ArmorTech","Weathered Copper","#6d6355"],
+ ["ArmorTech","Obsidian Black","#242728"],
+ ["ArmorTech","Copper Penny","#aa765b"],
+ ["ArmorTech","Satin Black","#303132"],
+ ["Kynar 500","Glacier White","#e1e3de"],
+ ["Kynar 500","Sterling Grey","#909490"],
+ ["Kynar 500","Charcoal Grey","#505552"],
+ ["Kynar 500","Tahoe Blue","#597483"],
+ ["Kynar 500","Pacific Blue","#34576c"],
+ ["Kynar 500","Forest Green","#365447"],
+ ["Kynar 500","Pine Green","#34483b"],
+ ["Kynar 500","Tile Red","#964f43"],
+ ["Kynar 500","Sierra Tan","#b5a88e"],
+ ["Kynar 500","Parchment","#c0baa4"],
+ ["Kynar 500","Zinc Grey","#777e7b"],
+ ["Kynar 500","Saddle Tan","#91816b"],
+ ["Kynar 500","Medium Bronze","#665d4f"],
+ ["Kynar 500","Hemlock Green","#708073"],
+ ["Kynar 500","Graphite Black","#363b3c"],
+ ["Kynar 500","Dark Bronze","#4f4942"],
+ ["Kynar 500","Musket","#5c5145"],
+ ["Kynar 500","Matte Black","#252626"],
+ ["Kynar 500","Terra Cotta","#ad674d"],
+ ["Kynar 500","Colonial Red","#854740"],
+ ["Kynar 500","Retro Red","#953d39"]
+];
+
+const profiles=new Map(PANEL_CATALOG.map(profile=>[profile.id,profile]));
+export function getPanelProfile(id,surface) {
+ const profile=profiles.get(id);
+ return profile?.uses.includes(surface)?profile:null;
+}
+
+const panNames = {'light-striated':'Light striations',striated:'Striations', accent:'Accent ribs', flat:'Flat pan', pencil:'Pencil ribs', 'single-v':'Single V-groove', 'double-v':'Double V-groove'};
+
+export function panChoices(profile, width) {
+ const choices=[];
+ if(!profile?.widths?.includes(width))return choices;
+ for(const style of profile.pans || []) {
+  if(style!=='accent'){
+   let label=panNames[style];
+   if(style==='flat'&&profile.id==='board-batten')label+=' · by inquiry';
+   if(style==='flat'&&profile.id.startsWith('smoothwall'))label+=' · 24/22 ga steel or .032/.040″ aluminum';
+   choices.push({id:style,label});continue;
+  }
+  let count;
+  if(profile.id==='easy-lock')count=width===12?3:4;
+  else if(profile.id==='streamline-12in')count=3;
+  else if(profile.id.startsWith('clip-lock'))count=2;
+  else if(profile.id.startsWith('slim-lock')&&width===16)count=3;
+  else if(profile.id==='maxrun-238')count=width<=14?2:3;
+  else if(profile.id.startsWith('versa-span')||profile.id==='ms-200')count=width<=14?2:3;
+  else if(profile.id==='ms-100'||profile.id==='ms-150')count=width===profile.widths[0]?2:3;
+  const twoPlants=count===3&&(profile.id==='versa-span-produced-in-ca'||profile.id.startsWith('ms-'));
+  if(twoPlants)choices.push({id:'accent-2',label:'2 accent ribs · Sacramento',count:2});
+  choices.push({id:'accent',label:count?count+' accent ribs'+(twoPlants?(profile.id.startsWith('ms-')?' · Salem / Riverside':' · Riverside'):''):'Accent ribs · illustrative spacing',count:count||2});
+ }
+ return choices;
+}
+
+export function selectedPan(profile,width,id) {
+ const choices=panChoices(profile,width);
+ return choices.find(item=>item.id===id)||choices[0]||null;
+}

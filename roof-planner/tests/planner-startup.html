@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Roof Planner startup regression</title>
+<p id="status" role="status">Starting the planner…</p>
+<iframe title="Planner under test" style="width:950px;height:650px"></iframe>
+<script>
+const result=document.querySelector('#status'),frame=document.querySelector('iframe');
+const requireValue=(value,message)=>{if(!value)throw Error(message)};
+async function until(fn){
+ const stop=performance.now()+12000;
+ while(!fn()){if(performance.now()>stop)throw Error('Timed out waiting for the 3D viewport');await new Promise(r=>setTimeout(r,35));}
+}
+frame.onload=async()=>{
+ try{
+  const doc=frame.contentDocument,find=s=>doc.querySelector(s);
+  for(const button of doc.querySelectorAll('#steps button')){
+   button.click();requireValue(find('#stepLabel').textContent==='STEP 0'+button.dataset.step,'Workflow did not bind step '+button.dataset.step);
+  }
+  find('#blankPreview').click();
+  await until(()=>find('#replacementPrompt[open]'));
+  find('#replacementPrompt button.primary').click();
+  await until(()=>find('#planeCount').textContent==='0');
+  find('#planView').click();find('#buildHouse').click();find('#generateHouse').click();
+  requireValue(find('#planeCount').textContent==='2','Generated house is missing');
+  find('#steps button[data-step="5"]').click();
+  await until(()=>!find('#three').hidden&&!find('#threeActions').hidden&&find('#three canvas, #three svg'));
+  find('#zoomIn3d').click();find('#reset3d').click();
+  const spec=find('#panelSettings .catalog-profile');spec.value='easy-lock';
+  spec.dispatchEvent(new frame.contentWindow.Event('change'));
+  find('#panelSettings .catalog-apply').click();
+  await until(()=>find('#panelType').value.includes('Easy-Lock'));
+  find('#trim3d').click();find('#selectAllTrim').click();
+  requireValue(find('#trimTotals tbody').rows.length===5,'Expected five trim quantities');
+  find('#applyRoofTrim').click();
+  await until(()=>!find('#dialog').open);
+  find('#trim3d').click();requireValue(find('#enableRidgeCap').checked,'Ridge cap choice was lost.');
+  result.textContent='PASS · Workflow navigation, generated house, 3D controls, Easy-Lock and building trim.';
+ }catch(error){result.textContent='FAIL · '+error.message;throw error;}
+};
+frame.src='../dist/index.html';
+</script></html>
